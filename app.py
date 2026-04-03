@@ -45,7 +45,7 @@ def preprocess():
     movies, credits = load_data()
     
     movies = movies.merge(credits, on='title')
-    movies = movies[['id','title','overview','genres','keywords','cast','crew']]
+    movies = movies[['id','title','overview','genres','keywords','cast','crew','vote_average']]
     movies.dropna(inplace=True)
 
     def convert(text):
