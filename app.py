@@ -72,7 +72,7 @@ def preprocess():
 
     movies['tags'] = movies['overview'] + movies['genres'] + movies['keywords'] + movies['cast'] + movies['crew']
 
-   new_df = movies[['id','title','tags','overview','vote_average']]
+    new_df = movies[['id','title','tags','overview','vote_average']]
     new_df['tags'] = new_df['tags'].apply(lambda x: " ".join(x).lower())
 
     return new_df
