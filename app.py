@@ -18,7 +18,7 @@ import ast
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-st.markdown("<h1 style='text-align:center; color:#E50914;'>🎬 Movie Recommender</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#E50914;'>🎬 Movie Recommendation System</h1>", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
@@ -119,22 +119,40 @@ if st.button("Recommend"):
 
     st.subheader("🎯 Recommended Movies")
 
-    cols = st.columns(5)
+   cols = st.columns(3)
 
-    for i in range(5):
-        with cols[i]:
-            st.markdown(f"""
-            <div style="
-                background-color:#1c1c1c;
-                padding:10px;
-                border-radius:10px;
-                text-align:center;
+for i in range(5):
+    with cols[i % 3]:
+        st.markdown(f"""
+        <div style="
+            background-color:#1c1c1c;
+            padding:15px;
+            border-radius:12px;
+            text-align:center;
+            margin-bottom:20px;
+        ">
+            <img src="{posters[i]}" width="100%" style="border-radius:10px;">
+            
+            <h4 style="
+                color:white;
+                font-size:16px;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
             ">
-                <img src="{posters[i]}" width="100%" style="border-radius:10px;">
-                <h4 style="color:white;">{names[i]}</h4>
-                <p style="color:gold;">⭐ {ratings[i]}</p>
-                <p style="color:#ccc; font-size:12px;">
-                    {overviews[i][:80]}...
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+                {names[i]}
+            </h4>
+
+            <p style="color:gold; font-size:14px;">⭐ {ratings[i]}</p>
+
+            <p style="
+                color:#ccc;
+                font-size:13px;
+                height:120px;
+                overflow-y:auto;
+                text-align:left;
+            ">
+                {overviews[i]}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
