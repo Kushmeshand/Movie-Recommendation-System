@@ -7,8 +7,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 st.title("🎬 Movie Recommendation System")
 
-movies = pd.read_csv("https://raw.githubusercontent.com/abdelrahman-gaber/tmdb-dataset/master/tmdb_5000_movies.csv")
-credits = pd.read_csv("https://raw.githubusercontent.com/abdelrahman-gaber/tmdb-dataset/master/tmdb_5000_credits.csv")
+@st.cache_data
+def load_data():
+    movies = pd.read_csv("https://raw.githubusercontent.com/harshitv804/tmdb-dataset/master/tmdb_5000_movies.csv")
+    credits = pd.read_csv("https://raw.githubusercontent.com/harshitv804/tmdb-dataset/master/tmdb_5000_credits.csv")
+    return movies, credits
+
+movies, credits = load_data()
 
 movies = movies.merge(credits, on='title')
 movies = movies[['id','title','overview','genres','keywords','cast','crew']]
