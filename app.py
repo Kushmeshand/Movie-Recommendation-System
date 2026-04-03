@@ -1,33 +1,36 @@
 import streamlit as st
 import requests
-
-API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
-
-def fetch_poster(movie_title):
-    url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
-    data = requests.get(url).json()
-    
-    if data['results']:
-        poster_path = data['results'][0].get('poster_path')
-        if poster_path:
-            return "https://image.tmdb.org/t/p/w500/" + poster_path
-    
-    return "https://via.placeholder.com/300x450.png?text=No+Image"
 import pandas as pd
 import ast
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+# ---------------- API ----------------
+API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
+
+def fetch_poster(movie_title):
+    try:
+        query = movie_title.replace(" ", "+")
+        url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={query}"
+        data = requests.get(url, timeout=5).json()
+
+        if data.get('results') and len(data['results']) > 0:
+            poster_path = data['results'][0].get('poster_path')
+            if poster_path:
+                return "https://image.tmdb.org/t/p/w500/" + poster_path
+
+        return "https://via.placeholder.com/300x450.png?text=No+Poster"
+
+    except:
+        return "https://via.placeholder.com/300x450.png?text=Error"
+
+# ---------------- UI HEADER ----------------
 st.markdown("<h1 style='text-align:center; color:#E50914;'>🎬 Movie Recommendation System</h1>", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
 body {
     background-color: #0E1117;
-}
-h1 {
-    color: #E50914;
-    text-align: center;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -43,7 +46,7 @@ def load_data():
 @st.cache_data
 def preprocess():
     movies, credits = load_data()
-    
+
     movies = movies.merge(credits, on='title')
     movies = movies[['id','title','overview','genres','keywords','cast','crew','vote_average']]
     movies.dropna(inplace=True)
@@ -52,10 +55,7 @@ def preprocess():
         return [i['name'] for i in ast.literal_eval(text)]
 
     def convert_cast(text):
-        L = []
-        for i in ast.literal_eval(text)[:3]:
-            L.append(i['name'])
-        return L
+        return [i['name'] for i in ast.literal_eval(text)[:3]]
 
     def fetch_director(text):
         for i in ast.literal_eval(text):
@@ -82,12 +82,13 @@ def preprocess():
 def create_model(new_df):
     cv = CountVectorizer(max_features=5000, stop_words='english')
     vectors = cv.fit_transform(new_df['tags']).toarray()
-    similarity = cosine_similarity(vectors)
-    return similarity
+    return cosine_similarity(vectors)
 
 new_df = preprocess()
 similarity = create_model(new_df)
+
 st.markdown("---")
+
 # ---------------- RECOMMEND ----------------
 def recommend(movie):
     index = new_df[new_df['title'] == movie].index[0]
@@ -97,20 +98,18 @@ def recommend(movie):
                          reverse=True,
                          key=lambda x: x[1])[1:6]
 
-    names = []
-    posters = []
-    ratings = []
-    overviews = []
+    names, posters, ratings, overviews = [], [], [], []
 
     for i in movies_list:
         row = new_df.iloc[i[0]]
-        
+
         names.append(row.title)
         posters.append(fetch_poster(row.title))
-        ratings.append(row.vote_average)
+        ratings.append(round(row.vote_average, 1))
         overviews.append(" ".join(row.overview))
 
     return names, posters, ratings, overviews
+
 # ---------------- UI ----------------
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
