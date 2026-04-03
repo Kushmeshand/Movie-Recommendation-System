@@ -9,8 +9,8 @@ st.title("🎬 Movie Recommendation System")
 
 @st.cache_data
 def load_data():
-    movies = pd.read_csv("https://raw.githubusercontent.com/harshitv804/tmdb-dataset/master/tmdb_5000_movies.csv")
-    credits = pd.read_csv("https://raw.githubusercontent.com/harshitv804/tmdb-dataset/master/tmdb_5000_credits.csv")
+    movies = pd.read_csv("https://drive.google.com/file/d/1MvT-iG8f837YFmZdXzcuuhhfh4WYTZQq")
+    credits = pd.read_csv("https://drive.google.com/file/d/15EBSjEpdVoSrtPRQIuv_fvxlbgQeSuTZ")
     return movies, credits
 
 movies, credits = load_data()
