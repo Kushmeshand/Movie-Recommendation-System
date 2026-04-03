@@ -6,80 +6,79 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 st.title("🎬 Movie Recommendation System")
 
-# Load data from Google Drive
+# ---------------- LOAD DATA ----------------
 @st.cache_data
 def load_data():
     movies = pd.read_csv("https://drive.google.com/uc?export=download&id=1MvT-iG8f837YFmZdXzcuuhhfh4WYTZQq")
     credits = pd.read_csv("https://drive.google.com/uc?export=download&id=15EBSjEpdVoSrtPRQIuv_fvxlbgQeSuTZ")
     return movies, credits
 
-movies, credits = load_data()
+# ---------------- PREPROCESS ----------------
+@st.cache_data
+def preprocess():
+    movies, credits = load_data()
+    
+    movies = movies.merge(credits, on='title')
+    movies = movies[['id','title','overview','genres','keywords','cast','crew']]
+    movies.dropna(inplace=True)
 
-# Merge
-movies = movies.merge(credits, on='title')
-movies = movies[['id','title','overview','genres','keywords','cast','crew']]
-movies.dropna(inplace=True)
+    def convert(text):
+        return [i['name'] for i in ast.literal_eval(text)]
 
-# Convert functions
-def convert(text):
-    L = []
-    for i in ast.literal_eval(text):
-        L.append(i['name'])
-    return L
-
-def convert_cast(text):
-    L = []
-    counter = 0
-    for i in ast.literal_eval(text):
-        if counter != 3:
+    def convert_cast(text):
+        L = []
+        for i in ast.literal_eval(text)[:3]:
             L.append(i['name'])
-            counter += 1
-        else:
-            break
-    return L
+        return L
 
-def fetch_director(text):
-    L = []
-    for i in ast.literal_eval(text):
-        if i['job'] == 'Director':
-            L.append(i['name'])
-    return L
+    def fetch_director(text):
+        for i in ast.literal_eval(text):
+            if i['job'] == 'Director':
+                return [i['name']]
+        return []
 
-movies['genres'] = movies['genres'].apply(convert)
-movies['keywords'] = movies['keywords'].apply(convert)
-movies['cast'] = movies['cast'].apply(convert_cast)
-movies['crew'] = movies['crew'].apply(fetch_director)
+    movies['genres'] = movies['genres'].apply(convert)
+    movies['keywords'] = movies['keywords'].apply(convert)
+    movies['cast'] = movies['cast'].apply(convert_cast)
+    movies['crew'] = movies['crew'].apply(fetch_director)
 
-movies['overview'] = movies['overview'].apply(lambda x: x.split())
+    movies['overview'] = movies['overview'].apply(lambda x: x.split())
 
-# Create tags
-movies['tags'] = movies['overview'] + movies['genres'] + movies['keywords'] + movies['cast'] + movies['crew']
+    movies['tags'] = movies['overview'] + movies['genres'] + movies['keywords'] + movies['cast'] + movies['crew']
 
-new_df = movies[['id','title','tags']]
-new_df['tags'] = new_df['tags'].apply(lambda x: " ".join(x))
-new_df['tags'] = new_df['tags'].apply(lambda x: x.lower())
+    new_df = movies[['id','title','tags']]
+    new_df['tags'] = new_df['tags'].apply(lambda x: " ".join(x).lower())
 
-# Vectorization
-cv = CountVectorizer(max_features=5000, stop_words='english')
-vectors = cv.fit_transform(new_df['tags']).toarray()
+    return new_df
 
-# Similarity
-similarity = cosine_similarity(vectors)
+# ---------------- MODEL ----------------
+@st.cache_data
+def create_model(new_df):
+    cv = CountVectorizer(max_features=5000, stop_words='english')
+    vectors = cv.fit_transform(new_df['tags']).toarray()
+    similarity = cosine_similarity(vectors)
+    return similarity
 
-# Recommendation function
+new_df = preprocess()
+similarity = create_model(new_df)
+
+# ---------------- RECOMMEND ----------------
 def recommend(movie):
     index = new_df[new_df['title'] == movie].index[0]
     distances = similarity[index]
+
     movies_list = sorted(list(enumerate(distances)),
                          reverse=True,
                          key=lambda x: x[1])[1:6]
 
     return [new_df.iloc[i[0]].title for i in movies_list]
 
-# UI
+# ---------------- UI ----------------
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
 if st.button("Recommend"):
     recommendations = recommend(selected_movie)
+
+    st.subheader("Recommended Movies:")
     for movie in recommendations:
-        st.write(movie)
+        st.write("👉", movie)
