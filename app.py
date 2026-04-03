@@ -12,13 +12,7 @@ def fetch_poster(movie_title):
     try:
         query = movie_title.replace(" ", "%20")
         url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={query}"
-
-        response = requests.get(url, timeout=5)
-
-        if response.status_code != 200:
-            return "https://via.placeholder.com/300x450.png?text=No+Image"
-
-        data = response.json()
+        data = requests.get(url, timeout=5).json()
 
         if data.get("results"):
             poster_path = data["results"][0].get("poster_path")
@@ -30,25 +24,49 @@ def fetch_poster(movie_title):
     except:
         return "https://via.placeholder.com/300x450.png?text=Error"
 
-# ---------------- UI HEADER ----------------
+
+def fetch_details(movie_title):
+    try:
+        search = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
+        data = requests.get(search).json()
+
+        if not data['results']:
+            return None
+
+        movie_id = data['results'][0]['id']
+
+        # trailer
+        videos = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}").json()
+        trailer = None
+        for v in videos['results']:
+            if v['type'] == 'Trailer':
+                trailer = v['key']
+                break
+
+        # cast & crew
+        credits = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}").json()
+
+        cast = credits['cast'][:5]
+        director = next((c for c in credits['crew'] if c['job'] == 'Director'), None)
+
+        return {"trailer": trailer, "cast": cast, "director": director}
+
+    except:
+        return None
+
+
+# ---------------- UI ----------------
 st.markdown("<h1 style='text-align:center; color:#E50914;'>🎬 Movie Recommendation System</h1>", unsafe_allow_html=True)
+st.markdown("---")
 
-st.markdown("""
-<style>
-body {
-    background-color: #0E1117;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- LOAD DATA ----------------
+# ---------------- LOAD ----------------
 @st.cache_data
 def load_data():
     movies = pd.read_csv("https://drive.google.com/uc?export=download&id=1MvT-iG8f837YFmZdXzcuuhhfh4WYTZQq")
     credits = pd.read_csv("https://drive.google.com/uc?export=download&id=15EBSjEpdVoSrtPRQIuv_fvxlbgQeSuTZ")
     return movies, credits
 
-# ---------------- PREPROCESS ----------------
+
 @st.cache_data
 def preprocess():
     movies, credits = load_data()
@@ -83,28 +101,25 @@ def preprocess():
 
     return new_df
 
-# ---------------- MODEL ----------------
+
 @st.cache_data
-def create_model(new_df):
+def create_model(df):
     cv = CountVectorizer(max_features=5000, stop_words='english')
-    vectors = cv.fit_transform(new_df['tags']).toarray()
+    vectors = cv.fit_transform(df['tags']).toarray()
     return cosine_similarity(vectors)
+
 
 new_df = preprocess()
 similarity = create_model(new_df)
-
-st.markdown("---")
 
 # ---------------- RECOMMEND ----------------
 def recommend(movie):
     index = new_df[new_df['title'] == movie].index[0]
     distances = similarity[index]
 
-    movies_list = sorted(list(enumerate(distances)),
-                         reverse=True,
-                         key=lambda x: x[1])[1:6]
+    movies_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
 
-    names, posters, ratings, overviews = [], [], [], []
+    names, posters, ratings, overviews, matches = [], [], [], [], []
 
     for i in movies_list:
         row = new_df.iloc[i[0]]
@@ -113,21 +128,54 @@ def recommend(movie):
         posters.append(fetch_poster(row.title))
         ratings.append(round(row.vote_average, 1))
         overviews.append(" ".join(row.overview))
+        matches.append(round(i[1]*100, 1))
 
-    return names, posters, ratings, overviews
+    return names, posters, ratings, overviews, matches
+
 
 # ---------------- UI ----------------
 selected_movie = st.selectbox("Select a movie", new_df['title'])
+
 if st.button("Recommend"):
-    names, posters, ratings, overviews = recommend(selected_movie)
+    names, posters, ratings, overviews, matches = recommend(selected_movie)
 
     st.subheader("🎯 Recommended Movies")
+
+    selected = st.radio("Select a movie for details", names)
 
     cols = st.columns(5)
 
     for i in range(5):
         with cols[i]:
             st.image(posters[i])
-            st.markdown(f"**{names[i]}**")
+            st.write(names[i])
             st.write(f"⭐ {ratings[i]}")
-            st.caption(overviews[i][:150] + "...")
+            st.write(f"🔥 {matches[i]}%")
+
+    # ---------------- DETAILS ----------------
+    idx = names.index(selected)
+    details = fetch_details(selected)
+
+    st.markdown("---")
+    st.header(selected)
+
+    st.subheader("📝 Overview")
+    st.write(overviews[idx])
+
+    if details and details["trailer"]:
+        st.subheader("🎬 Trailer")
+        st.video(f"https://www.youtube.com/watch?v={details['trailer']}")
+
+    if details and details["director"]:
+        st.subheader("🎥 Director")
+        st.write(details["director"]["name"])
+
+    if details and details["cast"]:
+        st.subheader("👥 Cast")
+        cast_cols = st.columns(5)
+
+        for i, actor in enumerate(details["cast"]):
+            with cast_cols[i]:
+                if actor.get("profile_path"):
+                    st.image(f"https://image.tmdb.org/t/p/w200{actor['profile_path']}")
+                st.write(actor["name"])
