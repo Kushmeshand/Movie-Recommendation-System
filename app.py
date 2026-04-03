@@ -10,14 +10,20 @@ API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
 
 def fetch_poster(movie_title):
     try:
-        query = movie_title.replace(" ", "+")
+        query = movie_title.replace(" ", "%20")
         url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={query}"
-        data = requests.get(url, timeout=5).json()
 
-        if data.get('results') and len(data['results']) > 0:
-            poster_path = data['results'][0].get('poster_path')
+        response = requests.get(url, timeout=5)
+
+        if response.status_code != 200:
+            return "https://via.placeholder.com/300x450.png?text=No+Image"
+
+        data = response.json()
+
+        if data.get("results"):
+            poster_path = data["results"][0].get("poster_path")
             if poster_path:
-                return "https://image.tmdb.org/t/p/w500/" + poster_path
+                return "https://image.tmdb.org/t/p/w500" + poster_path
 
         return "https://via.placeholder.com/300x450.png?text=No+Poster"
 
