@@ -1,10 +1,36 @@
 import streamlit as st
+import requests
+
+API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
+
+def fetch_poster(movie_title):
+    url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
+    data = requests.get(url).json()
+    
+    if data['results']:
+        poster_path = data['results'][0].get('poster_path')
+        if poster_path:
+            return "https://image.tmdb.org/t/p/w500/" + poster_path
+    
+    return "https://via.placeholder.com/300x450.png?text=No+Image"
 import pandas as pd
 import ast
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 st.title("🎬 Movie Recommendation System")
+
+st.markdown("""
+<style>
+body {
+    background-color: #0E1117;
+}
+h1 {
+    color: #E50914;
+    text-align: center;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- LOAD DATA ----------------
 @st.cache_data
@@ -71,14 +97,27 @@ def recommend(movie):
                          reverse=True,
                          key=lambda x: x[1])[1:6]
 
-    return [new_df.iloc[i[0]].title for i in movies_list]
+    names = []
+    posters = []
+
+    for i in movies_list:
+        title = new_df.iloc[i[0]].title
+        names.append(title)
+        posters.append(fetch_poster(title))
+
+    return names, posters
 
 # ---------------- UI ----------------
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
 if st.button("Recommend"):
-    recommendations = recommend(selected_movie)
+    names, posters = recommend(selected_movie)
 
-    st.subheader("Recommended Movies:")
-    for movie in recommendations:
-        st.write("👉", movie)
+    st.subheader("🎯 Recommended Movies")
+
+    cols = st.columns(5)
+
+    for i in range(5):
+        with cols[i]:
+            st.image(posters[i])
+            st.caption(names[i])
