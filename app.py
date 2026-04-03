@@ -112,7 +112,6 @@ def recommend(movie):
 
 # ---------------- UI ----------------
 selected_movie = st.selectbox("Select a movie", new_df['title'])
-
 if st.button("Recommend"):
     names, posters, ratings, overviews = recommend(selected_movie)
 
@@ -122,20 +121,7 @@ if st.button("Recommend"):
 
     for i in range(5):
         with cols[i % 3]:
-            st.markdown(f"""
-            <div style="background-color:#1c1c1c; padding:15px; border-radius:12px; text-align:center; margin-bottom:20px;">
-                
-                <img src="{posters[i]}" width="100%" style="border-radius:10px;">
-
-                <h4 style="color:white; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                    {names[i]}
-                </h4>
-
-                <p style="color:gold; font-size:14px;">⭐ {ratings[i]}</p>
-
-                <p style="color:#ccc; font-size:13px; height:120px; overflow-y:auto; text-align:left;">
-                    {overviews[i]}
-                </p>
-
-            </div>
-            """, unsafe_allow_html=True)
+            st.image(posters[i])
+            st.markdown(f"**{names[i]}**")
+            st.write(f"⭐ {ratings[i]}")
+            st.caption(overviews[i][:150] + "...")
