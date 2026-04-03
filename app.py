@@ -72,7 +72,7 @@ def preprocess():
 
     movies['tags'] = movies['overview'] + movies['genres'] + movies['keywords'] + movies['cast'] + movies['crew']
 
-    new_df = movies[['id','title','tags']]
+   new_df = movies[['id','title','tags','overview','vote_average']]
     new_df['tags'] = new_df['tags'].apply(lambda x: " ".join(x).lower())
 
     return new_df
@@ -99,19 +99,23 @@ def recommend(movie):
 
     names = []
     posters = []
+    ratings = []
+    overviews = []
 
     for i in movies_list:
-        title = new_df.iloc[i[0]].title
-        names.append(title)
-        posters.append(fetch_poster(title))
+        row = new_df.iloc[i[0]]
+        
+        names.append(row.title)
+        posters.append(fetch_poster(row.title))
+        ratings.append(row.vote_average)
+        overviews.append(" ".join(row.overview))
 
-    return names, posters
-
+    return names, posters, ratings, overviews
 # ---------------- UI ----------------
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
 if st.button("Recommend"):
-    names, posters = recommend(selected_movie)
+    names, posters, ratings, overviews = recommend(selected_movie)
 
     st.subheader("🎯 Recommended Movies")
 
@@ -120,4 +124,6 @@ if st.button("Recommend"):
     for i in range(5):
         with cols[i]:
             st.image(posters[i])
-            st.caption(names[i])
+            st.markdown(f"**{names[i]}**")
+            st.write(f"⭐ Rating: {ratings[i]}")
+            st.caption(overviews[i][:100] + "...")
