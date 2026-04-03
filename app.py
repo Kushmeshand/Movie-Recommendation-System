@@ -123,10 +123,10 @@ if st.button("Recommend"):
 
     st.subheader("🎯 Recommended Movies")
 
-    cols = st.columns(3)
+    cols = st.columns(6)
 
     for i in range(5):
-        with cols[i % 3]:
+        with cols[i]:
             st.image(posters[i])
             st.markdown(f"**{names[i]}**")
             st.write(f"⭐ {ratings[i]}")
