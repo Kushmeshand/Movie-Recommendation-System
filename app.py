@@ -18,7 +18,7 @@ import ast
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-st.title("🎬 Movie Recommendation System")
+st.markdown("<h1 style='text-align:center; color:#E50914;'>🎬 Movie Recommender</h1>", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
@@ -87,7 +87,7 @@ def create_model(new_df):
 
 new_df = preprocess()
 similarity = create_model(new_df)
-
+st.markdown("---")
 # ---------------- RECOMMEND ----------------
 def recommend(movie):
     index = new_df[new_df['title'] == movie].index[0]
@@ -123,7 +123,18 @@ if st.button("Recommend"):
 
     for i in range(5):
         with cols[i]:
-            st.image(posters[i])
-            st.markdown(f"**{names[i]}**")
-            st.write(f"⭐ Rating: {ratings[i]}")
-            st.caption(overviews[i][:100] + "...")
+            st.markdown(f"""
+            <div style="
+                background-color:#1c1c1c;
+                padding:10px;
+                border-radius:10px;
+                text-align:center;
+            ">
+                <img src="{posters[i]}" width="100%" style="border-radius:10px;">
+                <h4 style="color:white;">{names[i]}</h4>
+                <p style="color:gold;">⭐ {ratings[i]}</p>
+                <p style="color:#ccc; font-size:12px;">
+                    {overviews[i][:80]}...
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
