@@ -119,7 +119,7 @@ if st.button("Recommend"):
 
     st.subheader("🎯 Recommended Movies")
 
-   cols = st.columns(3)
+    cols = st.columns(3)
 
 for i in range(5):
     with cols[i % 3]:
