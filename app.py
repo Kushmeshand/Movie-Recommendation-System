@@ -35,6 +35,11 @@ def fetch_details(movie_title):
 
         movie_id = data["results"][0]["id"]
 
+        # Movie info (runtime + release date)
+        movie_info = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}").json()
+        runtime = movie_info.get("runtime")
+        release_date = movie_info.get("release_date")
+
         # Trailer
         videos = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}").json()
         trailer = None
@@ -49,7 +54,13 @@ def fetch_details(movie_title):
         cast = credits["cast"][:5]
         director = next((c for c in credits["crew"] if c["job"] == "Director"), None)
 
-        return {"trailer": trailer, "cast": cast, "director": director}
+        return {
+            "trailer": trailer,
+            "cast": cast,
+            "director": director,
+            "runtime": runtime,
+            "release_date": release_date
+        }
 
     except:
         return None
@@ -66,6 +77,7 @@ def load_data():
 def preprocess():
     movies, credits = load_data()
     movies = movies.merge(credits, on="title")
+
     movies = movies[['id','title','overview','genres','keywords','cast','crew','vote_average']]
     movies.dropna(inplace=True)
 
@@ -123,8 +135,7 @@ def recommend(movie):
             "title": row.title,
             "poster": fetch_poster(row.title),
             "rating": round(row.vote_average, 1),
-            "overview": " ".join(row.overview),
-            "match": round(i[1]*100, 1)
+            "overview": " ".join(row.overview)
         })
 
     return results
@@ -148,9 +159,8 @@ if "recommendations" in st.session_state:
             st.image(movie["poster"])
             st.write(movie["title"])
             st.write(f"⭐ {movie['rating']}")
-            st.write(f"🔥 {movie['match']}%")
 
-            if st.button(f"Details {i}"):
+            if st.button("View Details", key=i):
                 st.session_state.selected_movie_details = movie
 
 # ---------------- SHOW DETAILS ----------------
@@ -160,6 +170,10 @@ if st.session_state.selected_movie_details:
 
     st.markdown("---")
     st.header(movie["title"])
+
+    if details:
+        st.write(f"📅 Release Date: {details['release_date']}")
+        st.write(f"⏱ Runtime: {details['runtime']} min")
 
     st.subheader("📝 Overview")
     st.write(movie["overview"])
