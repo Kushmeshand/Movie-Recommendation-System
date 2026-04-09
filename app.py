@@ -12,6 +12,7 @@ OMDB_KEY = "e15bce82"
 if "selected_movie_details" not in st.session_state:
     st.session_state.selected_movie_details = None
 
+# ---------------- REDDIT ----------------
 def fetch_reddit_reviews(movie):
     try:
         url = f"https://www.reddit.com/search.json?q={movie}+movie+review&limit=5"
@@ -30,6 +31,7 @@ def fetch_reddit_reviews(movie):
         return posts
     except:
         return []
+
 # ---------------- API ----------------
 def fetch_poster(movie_title):
     try:
@@ -46,7 +48,6 @@ def fetch_poster(movie_title):
 
 def fetch_details(movie_title):
     try:
-        # ---------- SEARCH ----------
         search = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
         data = requests.get(search).json()
 
@@ -55,14 +56,12 @@ def fetch_details(movie_title):
 
         movie_id = data["results"][0]["id"]
 
-        # ---------- MOVIE INFO ----------
         movie_info = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}").json()
 
         runtime = movie_info.get("runtime")
         release_date = movie_info.get("release_date")
         rating = movie_info.get("vote_average")
 
-        # ---------- TRAILER ----------
         videos = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}").json()
         trailer = None
         for v in videos["results"]:
@@ -70,12 +69,10 @@ def fetch_details(movie_title):
                 trailer = v["key"]
                 break
 
-        # ---------- CAST ----------
         credits = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}").json()
         cast = credits["cast"][:5]
         director = next((c for c in credits["crew"] if c["job"] == "Director"), None)
 
-        # ---------- WATCH PROVIDERS ----------
         providers_data = requests.get(
             f"https://api.themoviedb.org/3/movie/{movie_id}/watch/providers?api_key={API_KEY}"
         ).json()
@@ -92,15 +89,6 @@ def fetch_details(movie_title):
                         "type": "Subscription"
                     })
 
-            if "free" in region:
-                for p in region["free"]:
-                    providers.append({
-                        "name": p["provider_name"],
-                        "logo": "https://image.tmdb.org/t/p/w200" + p["logo_path"],
-                        "type": "Free"
-                    })
-
-        # ---------- OMDB (ROTTEN TOMATOES) ----------
         omdb = requests.get(f"http://www.omdbapi.com/?t={movie_title}&apikey={OMDB_KEY}").json()
 
         rt_rating = "N/A"
@@ -122,16 +110,7 @@ def fetch_details(movie_title):
 
     except:
         return None
-# ---------- REDDIT REVIEWS ----------
-st.subheader("💬 Reddit Reviews")
 
-reviews = fetch_reddit_reviews(movie["title"])
-
-if reviews:
-    for r in reviews:
-        st.markdown(f"🔗 [{r['title']}]({r['url']})")
-else:
-    st.write("No Reddit discussions found.")
 # ---------------- DATA ----------------
 @st.cache_data
 def load_data():
@@ -181,19 +160,11 @@ def create_model(df):
     vectors = cv.fit_transform(df['tags']).toarray()
     return cosine_similarity(vectors)
 
-new_df = preprocess()
-similarity = create_model(new_df)
-
-@st.cache_data
-def load_ratings():
-    ratings = pd.read_csv("https://files.grouplens.org/datasets/movielens/ml-latest-small/ratings.csv")
-    movies_ml = pd.read_csv("https://files.grouplens.org/datasets/movielens/ml-latest-small/movies.csv")
-    return ratings, movies_ml
-
-
+# ---------------- COLLAB ----------------
 @st.cache_data
 def create_collaborative():
-    ratings, movies_ml = load_ratings()
+    ratings = pd.read_csv("https://files.grouplens.org/datasets/movielens/ml-latest-small/ratings.csv")
+    movies_ml = pd.read_csv("https://files.grouplens.org/datasets/movielens/ml-latest-small/movies.csv")
 
     data = ratings.merge(movies_ml, on="movieId")
 
@@ -203,7 +174,9 @@ def create_collaborative():
     similarity = cosine_similarity(pivot.T)
 
     return similarity, pivot.columns
-    collab_similarity, collab_movies = create_collaborative()
+
+
+collab_similarity, collab_movies = create_collaborative()
 
 def recommend_collab(movie):
     if movie not in collab_movies:
@@ -216,18 +189,12 @@ def recommend_collab(movie):
                          reverse=True,
                          key=lambda x: x[1])[1:6]
 
-    results = []
+    return [{"title": collab_movies[i[0]], "poster": fetch_poster(collab_movies[i[0]])} for i in movies_list]
 
-    for i in movies_list:
-        title = collab_movies[i[0]]
+# ---------------- MAIN ----------------
+new_df = preprocess()
+similarity = create_model(new_df)
 
-        results.append({
-            "title": title,
-            "poster": fetch_poster(title)
-        })
-
-    return results
-# ---------------- RECOMMEND ----------------
 def recommend(movie):
     index = new_df[new_df['title'] == movie].index[0]
     distances = similarity[index]
@@ -236,19 +203,12 @@ def recommend(movie):
                          reverse=True,
                          key=lambda x: x[1])[1:6]
 
-    results = []
-
-    for i in movies_list:
-        row = new_df.iloc[i[0]]
-
-        results.append({
-            "title": row.title,
-            "poster": fetch_poster(row.title),
-            "rating": round(row.vote_average, 1),
-            "overview": " ".join(row.overview)
-        })
-
-    return results
+    return [{
+        "title": new_df.iloc[i[0]].title,
+        "poster": fetch_poster(new_df.iloc[i[0]].title),
+        "rating": round(new_df.iloc[i[0]].vote_average, 1),
+        "overview": " ".join(new_df.iloc[i[0]].overview)
+    } for i in movies_list]
 
 # ---------------- UI ----------------
 st.title("🎬 Movie Recommendation System")
@@ -258,24 +218,9 @@ selected_movie = st.selectbox("Select a movie", new_df['title'])
 if st.button("Recommend"):
     st.session_state.recommendations = recommend(selected_movie)
 
-# ---------------- SHOW CARDS ----------------
+# CONTENT
 if "recommendations" in st.session_state:
-   st.subheader("🎯 Content-Based Recommendations")
-    # ---------------- COLLABORATIVE ----------------
-st.subheader("🤝 Collaborative Recommendations")
-
-collab_results = recommend_collab(selected_movie)
-
-if collab_results:
-    cols = st.columns(5)
-
-    for i, movie in enumerate(collab_results):
-        with cols[i]:
-            st.image(movie["poster"])
-            st.write(movie["title"])
-else:
-    st.write("No collaborative recommendations available for this movie.")
-
+    st.subheader("🎯 Content-Based Recommendations")
     cols = st.columns(5)
 
     for i, movie in enumerate(st.session_state.recommendations):
@@ -287,7 +232,20 @@ else:
             if st.button("View Details", key=i):
                 st.session_state.selected_movie_details = movie
 
-# ---------------- SHOW DETAILS ----------------
+    # COLLAB
+    st.subheader("🤝 Collaborative Recommendations")
+    collab_results = recommend_collab(selected_movie)
+
+    if collab_results:
+        cols = st.columns(5)
+        for i, movie in enumerate(collab_results):
+            with cols[i]:
+                st.image(movie["poster"])
+                st.write(movie["title"])
+    else:
+        st.write("No collaborative recommendations available.")
+
+# DETAILS
 if st.session_state.selected_movie_details:
     movie = st.session_state.selected_movie_details
     details = fetch_details(movie["title"])
@@ -301,17 +259,6 @@ if st.session_state.selected_movie_details:
         st.write(f"📅 Release Date: {details['release_date']}")
         st.write(f"⏱ Runtime: {details['runtime']} min")
 
-    # ---------- WATCH PROVIDERS ----------
-    if details and details["providers"]:
-        st.subheader("📺 Where to Watch")
-        cols = st.columns(len(details["providers"]))
-
-        for i, p in enumerate(details["providers"]):
-            with cols[i]:
-                st.image(p["logo"])
-                st.write(p["name"])
-                st.caption(p["type"])
-
     st.subheader("📝 Overview")
     st.write(movie["overview"])
 
@@ -319,21 +266,8 @@ if st.session_state.selected_movie_details:
         st.subheader("🎬 Trailer")
         st.video(f"https://www.youtube.com/watch?v={details['trailer']}")
 
-    if details and details["director"]:
-        st.subheader("🎥 Director")
-        director = details["director"]
-
-        if director.get("profile_path"):
-            st.image("https://image.tmdb.org/t/p/w200" + director["profile_path"])
-
-        st.write(director["name"])
-
-    if details and details["cast"]:
-        st.subheader("👥 Cast")
-        cols = st.columns(5)
-
-        for i, actor in enumerate(details["cast"]):
-            with cols[i]:
-                if actor.get("profile_path"):
-                    st.image("https://image.tmdb.org/t/p/w200" + actor["profile_path"])
-                st.write(actor["name"])
+    # REDDIT
+    st.subheader("💬 Reddit Reviews")
+    reviews = fetch_reddit_reviews(movie["title"])
+    for r in reviews:
+        st.markdown(f"🔗 [{r['title']}]({r['url']})")
