@@ -17,7 +17,7 @@ collab_movies = pickle.load(open("collab_movies.pkl", "rb"))
 # ---------------- SESSION ----------------
 
 if "selected_movie_details" not in st.session_state:
-st.session_state.selected_movie_details = None
+    st.session_state.selected_movie_details = None
 
 # ---------------- API ----------------
 
