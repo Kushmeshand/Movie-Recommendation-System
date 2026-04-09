@@ -4,7 +4,7 @@ import pandas as pd
 import ast
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import pickle  # ✅ ADDED
+import pickle
 
 API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
 OMDB_KEY = "e15bce82"
@@ -17,7 +17,7 @@ collab_movies = pickle.load(open("collab_movies.pkl", "rb"))
 # ---------------- SESSION ----------------
 
 if "selected_movie_details" not in st.session_state:
-    st.session_state.selected_movie_details = None
+st.session_state.selected_movie_details = None
 
 # ---------------- API ----------------
 
@@ -44,20 +44,28 @@ data = requests.get(search).json()
 
     movie_id = data["results"][0]["id"]
 
-    movie_info = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}").json()
+    movie_info = requests.get(
+        f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}"
+    ).json()
 
     runtime = movie_info.get("runtime")
     release_date = movie_info.get("release_date")
     rating = movie_info.get("vote_average")
 
-    videos = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}").json()
+    videos = requests.get(
+        f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}"
+    ).json()
+
     trailer = None
     for v in videos["results"]:
         if v["type"] == "Trailer":
             trailer = v["key"]
             break
 
-    credits = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}").json()
+    credits = requests.get(
+        f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}"
+    ).json()
+
     cast = credits["cast"][:5]
     director = next((c for c in credits["crew"] if c["job"] == "Director"), None)
 
@@ -85,7 +93,9 @@ data = requests.get(search).json()
                     "type": "Free"
                 })
 
-    omdb = requests.get(f"http://www.omdbapi.com/?t={movie_title}&apikey={OMDB_KEY}").json()
+    omdb = requests.get(
+        f"http://www.omdbapi.com/?t={movie_title}&apikey={OMDB_KEY}"
+    ).json()
 
     rt_rating = "N/A"
     if omdb.get("Ratings"):
@@ -176,7 +186,6 @@ results = []
 
 for i in movies_list:
     row = new_df.iloc[i[0]]
-
     results.append({
         "title": row.title,
         "poster": fetch_poster(row.title),
@@ -187,7 +196,7 @@ for i in movies_list:
 return results
 ```
 
-# ---------------- COLLAB FUNCTION (ADDED) ----------------
+# ---------------- COLLAB ----------------
 
 def recommend_collab(movie):
 if movie not in collab_movies:
@@ -204,7 +213,7 @@ movies_list = sorted(list(enumerate(distances)),
 return [collab_movies[i[0]] for i in movies_list]
 ```
 
-# ---------------- HYBRID (ADDED) ----------------
+# ---------------- HYBRID ----------------
 
 def hybrid_recommend(movie):
 try:
@@ -230,7 +239,7 @@ for title in final_titles:
 return results
 ```
 
-# ---------------- REDDIT (ADDED) ----------------
+# ---------------- REDDIT ----------------
 
 def fetch_reddit_reviews(movie):
 try:
@@ -255,7 +264,7 @@ st.title("🎬 Movie Recommendation System")
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
 if st.button("Recommend"):
-st.session_state.recommendations = hybrid_recommend(selected_movie)  # ✅ CHANGED
+st.session_state.recommendations = hybrid_recommend(selected_movie)
 
 # ---------------- SHOW CARDS ----------------
 
@@ -291,43 +300,10 @@ if details:
     st.write(f"📅 Release Date: {details['release_date']}")
     st.write(f"⏱ Runtime: {details['runtime']} min")
 
-if details and details["providers"]:
-    st.subheader("📺 Where to Watch")
-    cols = st.columns(len(details["providers"]))
-
-    for i, p in enumerate(details["providers"]):
-        with cols[i]:
-            st.image(p["logo"])
-            st.write(p["name"])
-            st.caption(p["type"])
-
 st.subheader("📝 Overview")
 st.write(movie["overview"])
 
-if details and details["trailer"]:
-    st.subheader("🎬 Trailer")
-    st.video(f"https://www.youtube.com/watch?v={details['trailer']}")
-
-if details and details["director"]:
-    st.subheader("🎥 Director")
-    director = details["director"]
-
-    if director.get("profile_path"):
-        st.image("https://image.tmdb.org/t/p/w200" + director["profile_path"])
-
-    st.write(director["name"])
-
-if details and details["cast"]:
-    st.subheader("👥 Cast")
-    cols = st.columns(5)
-
-    for i, actor in enumerate(details["cast"]):
-        with cols[i]:
-            if actor.get("profile_path"):
-                st.image("https://image.tmdb.org/t/p/w200" + actor["profile_path"])
-            st.write(actor["name"])
-
-# -------- REDDIT REVIEWS --------
+# -------- REDDIT --------
 st.subheader("💬 Reddit Reviews")
 reviews = fetch_reddit_reviews(movie["title"])
 
