@@ -12,6 +12,24 @@ OMDB_KEY = "e15bce82"
 if "selected_movie_details" not in st.session_state:
     st.session_state.selected_movie_details = None
 
+def fetch_reddit_reviews(movie):
+    try:
+        url = f"https://www.reddit.com/search.json?q={movie}+movie+review&limit=5"
+        headers = {"User-Agent": "Mozilla/5.0"}
+
+        data = requests.get(url, headers=headers).json()
+
+        posts = []
+        for post in data["data"]["children"]:
+            p = post["data"]
+            posts.append({
+                "title": p["title"],
+                "url": "https://reddit.com" + p["permalink"]
+            })
+
+        return posts
+    except:
+        return []
 # ---------------- API ----------------
 def fetch_poster(movie_title):
     try:
@@ -104,7 +122,16 @@ def fetch_details(movie_title):
 
     except:
         return None
+# ---------- REDDIT REVIEWS ----------
+st.subheader("💬 Reddit Reviews")
 
+reviews = fetch_reddit_reviews(movie["title"])
+
+if reviews:
+    for r in reviews:
+        st.markdown(f"🔗 [{r['title']}]({r['url']})")
+else:
+    st.write("No Reddit discussions found.")
 # ---------------- DATA ----------------
 @st.cache_data
 def load_data():
@@ -157,6 +184,49 @@ def create_model(df):
 new_df = preprocess()
 similarity = create_model(new_df)
 
+@st.cache_data
+def load_ratings():
+    ratings = pd.read_csv("https://files.grouplens.org/datasets/movielens/ml-latest-small/ratings.csv")
+    movies_ml = pd.read_csv("https://files.grouplens.org/datasets/movielens/ml-latest-small/movies.csv")
+    return ratings, movies_ml
+
+
+@st.cache_data
+def create_collaborative():
+    ratings, movies_ml = load_ratings()
+
+    data = ratings.merge(movies_ml, on="movieId")
+
+    pivot = data.pivot_table(index="userId", columns="title", values="rating")
+    pivot.fillna(0, inplace=True)
+
+    similarity = cosine_similarity(pivot.T)
+
+    return similarity, pivot.columns
+    collab_similarity, collab_movies = create_collaborative()
+
+def recommend_collab(movie):
+    if movie not in collab_movies:
+        return []
+
+    idx = list(collab_movies).index(movie)
+    distances = collab_similarity[idx]
+
+    movies_list = sorted(list(enumerate(distances)),
+                         reverse=True,
+                         key=lambda x: x[1])[1:6]
+
+    results = []
+
+    for i in movies_list:
+        title = collab_movies[i[0]]
+
+        results.append({
+            "title": title,
+            "poster": fetch_poster(title)
+        })
+
+    return results
 # ---------------- RECOMMEND ----------------
 def recommend(movie):
     index = new_df[new_df['title'] == movie].index[0]
@@ -190,7 +260,21 @@ if st.button("Recommend"):
 
 # ---------------- SHOW CARDS ----------------
 if "recommendations" in st.session_state:
-    st.subheader("🎯 Recommended Movies")
+   st.subheader("🎯 Content-Based Recommendations")
+    # ---------------- COLLABORATIVE ----------------
+st.subheader("🤝 Collaborative Recommendations")
+
+collab_results = recommend_collab(selected_movie)
+
+if collab_results:
+    cols = st.columns(5)
+
+    for i, movie in enumerate(collab_results):
+        with cols[i]:
+            st.image(movie["poster"])
+            st.write(movie["title"])
+else:
+    st.write("No collaborative recommendations available for this movie.")
 
     cols = st.columns(5)
 
