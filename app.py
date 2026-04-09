@@ -213,15 +213,22 @@ def recommend(movie):
 
 # ---------------- COLLAB ----------------
 def recommend_collab(movie):
-    if movie not in collab_movies:
+    # find closest match
+    match = None
+    for m in collab_movies:
+        if movie.lower() in m.lower():
+            match = m
+            break
+
+    if match is None:
         return []
 
-    idx = list(collab_movies).index(movie)
+    idx = collab_movies.index(match)
     distances = collab_similarity[idx]
 
     movies_list = sorted(list(enumerate(distances)),
-                         reverse=True,
-                         key=lambda x: x[1])[1:6]
+                         key=lambda x: x[1],
+                         reverse=True)[1:6]
 
     return [collab_movies[i[0]] for i in movies_list]
 
