@@ -5,13 +5,26 @@ import ast
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
+import requests
+import io
 
+def load_pkl_from_drive(url):
+    response = requests.get(url)
+    return pickle.load(io.BytesIO(response.content))
+
+# ✅ Your Google Drive direct links
+collab_similarity = load_pkl_from_drive(
+    "https://drive.google.com/uc?export=download&id=1hLX4egbrSd4hG2Qf1jhB5x5SumqtqO5V"
+)
+
+collab_movies = load_pkl_from_drive(
+    "https://drive.google.com/uc?export=download&id=15XF2K6hnPOHJG8e3RI-jnyXdxci43yrU"
+)
+# API KEYS
 API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
 OMDB_KEY = "e15bce82"
 
-# ---------------- COLLAB MODEL ----------------
-collab_similarity = pickle.load(open("collab_similarity.pkl", "rb"))
-collab_movies = pickle.load(open("collab_movies.pkl", "rb"))
+
 
 # ---------------- SESSION ----------------
 if "selected_movie_details" not in st.session_state:
