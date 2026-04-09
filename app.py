@@ -107,8 +107,10 @@ def fetch_details(movie_title):
 # ---------------- REDDIT ----------------
 def fetch_reddit_reviews(movie):
     try:
-        url = f"https://www.reddit.com/search.json?q={movie}&limit=5"
+        query = movie.replace(" ", "+") + "+movie+review"
+        url = f"https://www.reddit.com/search.json?q={query}&limit=5&sort=relevance"
         headers = {"User-agent": "Mozilla/5.0"}
+
         data = requests.get(url, headers=headers).json()
 
         reviews = []
@@ -121,7 +123,6 @@ def fetch_reddit_reviews(movie):
         return reviews
     except:
         return []
-
 # ---------------- DATA ----------------
 @st.cache_data
 def load_data():
@@ -246,10 +247,10 @@ if "cb" in st.session_state:
                 st.write(title)
 
                 if st.button("View Details", key=f"cf{i}"):
-                    st.session_state.selected_movie_details = {
-                        "title": title,
-                        "overview": "Overview not available"
-                    }
+                   st.session_state.selected_movie_details = {
+                      "title": title,
+                      "overview": "Fetching overview from TMDB..."
+                }
 
 # ---------------- DETAILS ----------------
 if st.session_state.selected_movie_details:
@@ -262,9 +263,56 @@ if st.session_state.selected_movie_details:
     if details:
         st.write(f"⭐ IMDb: {details['rating']}")
         st.write(f"🍅 Rotten Tomatoes: {details['rt']}")
+        st.write(f"📅 Release Date: {details['release_date']}")
+        st.write(f"⏱ Runtime: {details['runtime']} min")
+
+    # ---------- WATCH PROVIDERS ----------
+    if details and details["providers"]:
+        st.subheader("📺 Where to Watch")
+        cols = st.columns(len(details["providers"]))
+
+        for i, p in enumerate(details["providers"]):
+            with cols[i]:
+                st.image(p["logo"])
+                st.write(p["name"])
+                st.caption(p["type"])
 
     st.subheader("📝 Overview")
-    st.write(movie["overview"])
+    st.write(movie.get("overview", "Not available"))
+
+    if details and details["trailer"]:
+        st.subheader("🎬 Trailer")
+        st.video(f"https://www.youtube.com/watch?v={details['trailer']}")
+
+    if details and details["director"]:
+        st.subheader("🎥 Director")
+        director = details["director"]
+
+        if director.get("profile_path"):
+            st.image("https://image.tmdb.org/t/p/w200" + director["profile_path"])
+
+        st.write(director["name"])
+
+    if details and details["cast"]:
+        st.subheader("👥 Cast")
+        cols = st.columns(5)
+
+        for i, actor in enumerate(details["cast"]):
+            with cols[i]:
+                if actor.get("profile_path"):
+                    st.image("https://image.tmdb.org/t/p/w200" + actor["profile_path"])
+                st.write(actor["name"])
+
+    # -------- REDDIT --------
+    st.subheader("💬 Reddit Reviews")
+
+    reviews = fetch_reddit_reviews(movie["title"])
+
+    if reviews:
+        for r in reviews:
+            st.markdown(f"[{r['title']}]({r['url']})")
+    else:
+        st.write("No Reddit reviews found")
 
     # -------- REDDIT --------
     st.subheader("💬 Reddit Reviews")
