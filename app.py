@@ -25,7 +25,11 @@ API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
 OMDB_KEY = "e15bce82"
 
 
-
+def clean_title(title):
+    import re
+    title = re.sub(r"\(.*?\)", "", title)  # remove (1997), (a.k.a...)
+    title = title.replace(", The", "")
+    return title.strip()
 # ---------------- SESSION ----------------
 if "selected_movie_details" not in st.session_state:
     st.session_state.selected_movie_details = None
@@ -33,7 +37,8 @@ if "selected_movie_details" not in st.session_state:
 # ---------------- API ----------------
 def fetch_poster(movie_title):
     try:
-        url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
+        cleaned = clean_title(movie_title)
+        url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={cleaned}"
         data = requests.get(url).json()
         if data["results"]:
             poster = data["results"][0].get("poster_path")
@@ -46,7 +51,8 @@ def fetch_poster(movie_title):
 
 def fetch_details(movie_title):
     try:
-        search = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
+        cleaned = clean_title(movie_title)
+        search = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={cleaned}"
         data = requests.get(search).json()
 
         if not data["results"]:
@@ -263,12 +269,13 @@ if "cb" in st.session_state:
 
         for i, title in enumerate(st.session_state.cf):
             with cols[i]:
-                st.image(fetch_poster(title))
+                cleaned = clean_title(title)
+                st.image(fetch_poster(cleaned))
                 st.write(title)
 
                 if st.button("View Details", key=f"cf{i}"):
                    st.session_state.selected_movie_details = {
-                      "title": title,
+                     "title": clean_title(title),
                       "overview": "Fetching overview from TMDB..."
                 }
 
