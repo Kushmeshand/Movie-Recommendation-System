@@ -6,6 +6,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
+OMDB_KEY = "e15bce82"
 
 # ---------------- SESSION ----------------
 if "selected_movie_details" not in st.session_state:
@@ -27,6 +28,7 @@ def fetch_poster(movie_title):
 
 def fetch_details(movie_title):
     try:
+        # ---------- SEARCH ----------
         search = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
         data = requests.get(search).json()
 
@@ -35,12 +37,14 @@ def fetch_details(movie_title):
 
         movie_id = data["results"][0]["id"]
 
-        # Movie info (runtime + release date)
+        # ---------- MOVIE INFO ----------
         movie_info = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}").json()
+
         runtime = movie_info.get("runtime")
         release_date = movie_info.get("release_date")
+        rating = movie_info.get("vote_average")
 
-        # Trailer
+        # ---------- TRAILER ----------
         videos = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}").json()
         trailer = None
         for v in videos["results"]:
@@ -48,18 +52,54 @@ def fetch_details(movie_title):
                 trailer = v["key"]
                 break
 
-        # Cast & Crew
+        # ---------- CAST ----------
         credits = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}").json()
-
         cast = credits["cast"][:5]
         director = next((c for c in credits["crew"] if c["job"] == "Director"), None)
+
+        # ---------- WATCH PROVIDERS ----------
+        providers_data = requests.get(
+            f"https://api.themoviedb.org/3/movie/{movie_id}/watch/providers?api_key={API_KEY}"
+        ).json()
+
+        providers = []
+        if providers_data.get("results") and providers_data["results"].get("IN"):
+            region = providers_data["results"]["IN"]
+
+            if "flatrate" in region:
+                for p in region["flatrate"]:
+                    providers.append({
+                        "name": p["provider_name"],
+                        "logo": "https://image.tmdb.org/t/p/w200" + p["logo_path"],
+                        "type": "Subscription"
+                    })
+
+            if "free" in region:
+                for p in region["free"]:
+                    providers.append({
+                        "name": p["provider_name"],
+                        "logo": "https://image.tmdb.org/t/p/w200" + p["logo_path"],
+                        "type": "Free"
+                    })
+
+        # ---------- OMDB (ROTTEN TOMATOES) ----------
+        omdb = requests.get(f"http://www.omdbapi.com/?t={movie_title}&apikey={OMDB_KEY}").json()
+
+        rt_rating = "N/A"
+        if omdb.get("Ratings"):
+            for r in omdb["Ratings"]:
+                if r["Source"] == "Rotten Tomatoes":
+                    rt_rating = r["Value"]
 
         return {
             "trailer": trailer,
             "cast": cast,
             "director": director,
             "runtime": runtime,
-            "release_date": release_date
+            "release_date": release_date,
+            "rating": rating,
+            "rt": rt_rating,
+            "providers": providers
         }
 
     except:
@@ -172,8 +212,21 @@ if st.session_state.selected_movie_details:
     st.header(movie["title"])
 
     if details:
+        st.write(f"⭐ IMDb: {details['rating']}")
+        st.write(f"🍅 Rotten Tomatoes: {details['rt']}")
         st.write(f"📅 Release Date: {details['release_date']}")
         st.write(f"⏱ Runtime: {details['runtime']} min")
+
+    # ---------- WATCH PROVIDERS ----------
+    if details and details["providers"]:
+        st.subheader("📺 Where to Watch")
+        cols = st.columns(len(details["providers"]))
+
+        for i, p in enumerate(details["providers"]):
+            with cols[i]:
+                st.image(p["logo"])
+                st.write(p["name"])
+                st.caption(p["type"])
 
     st.subheader("📝 Overview")
     st.write(movie["overview"])
