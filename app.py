@@ -4,7 +4,7 @@ import pandas as pd
 import ast
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import pickle
+import pickle   # ✅ ADDED
 
 API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
 OMDB_KEY = "e15bce82"
@@ -41,28 +41,20 @@ def fetch_details(movie_title):
 
         movie_id = data["results"][0]["id"]
 
-        movie_info = requests.get(
-            f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}"
-        ).json()
+        movie_info = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}").json()
 
         runtime = movie_info.get("runtime")
         release_date = movie_info.get("release_date")
         rating = movie_info.get("vote_average")
 
-        videos = requests.get(
-            f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}"
-        ).json()
-
+        videos = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}").json()
         trailer = None
         for v in videos["results"]:
             if v["type"] == "Trailer":
                 trailer = v["key"]
                 break
 
-        credits = requests.get(
-            f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}"
-        ).json()
-
+        credits = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}").json()
         cast = credits["cast"][:5]
         director = next((c for c in credits["crew"] if c["job"] == "Director"), None)
 
@@ -90,9 +82,7 @@ def fetch_details(movie_title):
                         "type": "Free"
                     })
 
-        omdb = requests.get(
-            f"http://www.omdbapi.com/?t={movie_title}&apikey={OMDB_KEY}"
-        ).json()
+        omdb = requests.get(f"http://www.omdbapi.com/?t={movie_title}&apikey={OMDB_KEY}").json()
 
         rt_rating = "N/A"
         if omdb.get("Ratings"):
@@ -113,7 +103,6 @@ def fetch_details(movie_title):
 
     except:
         return None
-
 
 # ---------------- DATA ----------------
 @st.cache_data
@@ -164,11 +153,10 @@ def create_model(df):
     vectors = cv.fit_transform(df['tags']).toarray()
     return cosine_similarity(vectors)
 
-
 new_df = preprocess()
 similarity = create_model(new_df)
 
-# ---------------- CONTENT RECOMMEND ----------------
+# ---------------- ORIGINAL RECOMMEND ----------------
 def recommend(movie):
     index = new_df[new_df['title'] == movie].index[0]
     distances = similarity[index]
@@ -181,6 +169,7 @@ def recommend(movie):
 
     for i in movies_list:
         row = new_df.iloc[i[0]]
+
         results.append({
             "title": row.title,
             "poster": fetch_poster(row.title),
@@ -189,7 +178,6 @@ def recommend(movie):
         })
 
     return results
-
 
 # ---------------- COLLAB ----------------
 def recommend_collab(movie):
@@ -204,7 +192,6 @@ def recommend_collab(movie):
                          key=lambda x: x[1])[1:6]
 
     return [collab_movies[i[0]] for i in movies_list]
-
 
 # ---------------- HYBRID ----------------
 def hybrid_recommend(movie):
@@ -229,7 +216,6 @@ def hybrid_recommend(movie):
 
     return results
 
-
 # ---------------- REDDIT ----------------
 def fetch_reddit_reviews(movie):
     try:
@@ -245,14 +231,13 @@ def fetch_reddit_reviews(movie):
     except:
         return []
 
-
 # ---------------- UI ----------------
 st.title("🎬 Movie Recommendation System")
 
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
 if st.button("Recommend"):
-    st.session_state.recommendations = hybrid_recommend(selected_movie)
+    st.session_state.recommendations = hybrid_recommend(selected_movie)   # ✅ CHANGED
 
 # ---------------- SHOW CARDS ----------------
 if "recommendations" in st.session_state:
