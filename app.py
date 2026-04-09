@@ -17,7 +17,6 @@ def fetch_reddit_reviews(movie):
     try:
         url = f"https://www.reddit.com/search.json?q={movie}+movie+review&limit=5"
         headers = {"User-Agent": "Mozilla/5.0"}
-
         data = requests.get(url, headers=headers).json()
 
         posts = []
@@ -44,7 +43,6 @@ def fetch_poster(movie_title):
     except:
         pass
     return "https://via.placeholder.com/300x450.png?text=No+Image"
-
 
 def fetch_details(movie_title):
     try:
@@ -118,7 +116,6 @@ def load_data():
     credits = pd.read_csv("https://drive.google.com/uc?export=download&id=15EBSjEpdVoSrtPRQIuv_fvxlbgQeSuTZ")
     return movies, credits
 
-
 @st.cache_data
 def preprocess():
     movies, credits = load_data()
@@ -153,18 +150,17 @@ def preprocess():
 
     return new_df
 
-
 @st.cache_data
 def create_model(df):
     cv = CountVectorizer(max_features=5000, stop_words='english')
     vectors = cv.fit_transform(df['tags']).toarray()
     return cosine_similarity(vectors)
 
-# ---------------- COLLAB ----------------
+# ---------------- COLLABORATIVE ----------------
 @st.cache_data
 def create_collaborative():
-    ratings = pd.read_csv("https://files.grouplens.org/datasets/movielens/ml-latest-small/ratings.csv")
-    movies_ml = pd.read_csv("https://files.grouplens.org/datasets/movielens/ml-latest-small/movies.csv")
+    ratings = pd.read_csv("https://drive.google.com/uc?export=download&id=1_Ov18hzme3hrevAnLQCIl3ogtR_R_s8Y")
+    movies_ml = pd.read_csv("movies.csv")
 
     data = ratings.merge(movies_ml, on="movieId")
 
@@ -174,7 +170,6 @@ def create_collaborative():
     similarity = cosine_similarity(pivot.T)
 
     return similarity, pivot.columns
-
 
 collab_similarity, collab_movies = create_collaborative()
 
@@ -269,5 +264,9 @@ if st.session_state.selected_movie_details:
     # REDDIT
     st.subheader("💬 Reddit Reviews")
     reviews = fetch_reddit_reviews(movie["title"])
-    for r in reviews:
-        st.markdown(f"🔗 [{r['title']}]({r['url']})")
+
+    if reviews:
+        for r in reviews:
+            st.markdown(f"🔗 [{r['title']}]({r['url']})")
+    else:
+        st.write("No Reddit discussions found.")
