@@ -72,7 +72,8 @@ def fetch_details(movie_title):
         runtime = movie_info.get("runtime")
         release_date = movie_info.get("release_date")
         rating = movie_info.get("vote_average")
-
+        popularity = movie_info.get("popularity")
+        votes = movie_info.get("vote_count")
         videos = requests.get(
             f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}"
         ).json()
@@ -108,6 +109,8 @@ def fetch_details(movie_title):
             "release_date": release_date,
             "rating": rating,
             "rt": rt_rating,
+            "popularity": popularity,
+            "votes": votes,
             "overview": overview
         }
 
