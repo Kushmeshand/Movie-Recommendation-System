@@ -7,6 +7,37 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import io
 
+#-----------------theme-------------------------------#
+st.markdown("""
+<style>
+.stApp {
+    background-image: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.9)),
+    url("https://images.unsplash.com/photo-1608889175123-8ee362201f81");
+    
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+/* Make text white */
+h1, h2, h3, h4, h5, h6, p, div {
+    color: white;
+}
+
+/* Buttons */
+.stButton>button {
+    background-color: #e50914;
+    color: white;
+    border-radius: 8px;
+    padding: 8px 16px;
+}
+
+/* Selectbox */
+.stSelectbox label {
+    color: white;
+}
+</style>
+""", unsafe_allow_html=True)
 # ---------------- LOAD PKL FROM DRIVE ----------------
 def load_pkl_from_drive(url):
     response = requests.get(url)
@@ -221,7 +252,14 @@ def hybrid_recommend(movie):
     return results
 
 # ---------------- UI ----------------
-st.title("🎬 Movie Recommendation System")
+st.markdown("""
+<h1 style='text-align:center; font-size:60px; color:#e50914;'>
+CineMatch AI
+</h1>
+<p style='text-align:center; font-size:22px;'>
+Unlimited Movie Recommendations Powered by AI
+</p>
+""", unsafe_allow_html=True)
 
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
