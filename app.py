@@ -320,15 +320,16 @@ if st.session_state.selected_movie_details:
                 st.image("https://image.tmdb.org/t/p/w200" + actor["profile_path"])
             st.write(actor["name"])
     # -------- REDDIT --------
-   st.subheader("💬 Reddit Reviews")
+     st.subheader("💬 Reddit Reviews")
 
-   reviews = fetch_reddit_reviews(movie["title"])
-
-  if reviews:
-    for r in reviews:
-        st.markdown(f"**r/{r['subreddit']}**")
-        st.markdown(f"[{r['title']}]({r['url']})")
-        st.write(f"⬆️ {r['score']}   💬 {r['comments']}")
-        st.markdown("---")
-  else:
-    st.write("No Reddit reviews found")
+     reviews = fetch_reddit_reviews(movie["title"])
+ 
+     if reviews:
+        for r in reviews:
+           st.markdown(f"**r/{r['subreddit']}**")
+           st.markdown(f"[{r['title']}]({r['url']})")
+           st.write(f"⬆️ {r['score']}   💬 {r['comments']}")
+           st.markdown("---")
+     else:
+        st.write("No Reddit reviews found")
+  
