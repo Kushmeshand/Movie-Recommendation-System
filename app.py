@@ -72,7 +72,8 @@ def fetch_details(movie_title):
         runtime = movie_info.get("runtime")
         release_date = movie_info.get("release_date")
         rating = movie_info.get("vote_average")
-
+        popularity = movie_info.get("popularity")
+        votes = movie_info.get("vote_count")
         videos = requests.get(
             f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}"
         ).json()
@@ -108,6 +109,8 @@ def fetch_details(movie_title):
             "release_date": release_date,
             "rating": rating,
             "rt": rt_rating,
+            "popularity": popularity,
+            "votes": votes
             "overview": overview
         }
 
@@ -221,17 +224,28 @@ def hybrid_recommend(movie):
 st.title("🎬 Movie Recommendation System")
 
 selected_movie = st.selectbox("Select a movie", new_df['title'])
-
+genre_filter = st.selectbox(
+    "🎭 Filter by Genre",
+    ["All", "Action", "Comedy", "Drama", "Thriller"]
+)
 if st.button("Recommend"):
     st.session_state.recommendations = hybrid_recommend(selected_movie)
+movies_to_show = st.session_state.recommendations
 
+if genre_filter != "All":
+    filtered = []
+    for movie in movies_to_show:
+        row = new_df[new_df['title'] == movie["title"]]
+        if not row.empty and genre_filter.lower() in str(row.iloc[0].tags):
+            filtered.append(movie)
+    movies_to_show = filtered
 if "recommendations" in st.session_state:
 
     st.subheader("🎯 Recommended Movies")
 
     cols = st.columns(5)
 
-    for i, movie in enumerate(st.session_state.recommendations):
+   for i, movie in enumerate(movies_to_show):
         with cols[i]:
             st.image(movie["poster"])
             st.write(movie["title"])
@@ -251,7 +265,8 @@ if st.session_state.selected_movie_details:
     if details:
         st.write(f"⭐ IMDb: {details['rating']}")
         st.write(f"🍅 Rotten Tomatoes: {details['rt']}")
-
+        st.write(f"📊 Popularity: {details['popularity']}")
+        st.write(f"👥 Votes: {details['votes']}")
     st.subheader("📝 Overview")
     if details and details.get("overview"):
         st.write(details["overview"])
