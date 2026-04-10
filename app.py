@@ -72,8 +72,7 @@ def fetch_details(movie_title):
         runtime = movie_info.get("runtime")
         release_date = movie_info.get("release_date")
         rating = movie_info.get("vote_average")
-        popularity = movie_info.get("popularity")
-        votes = movie_info.get("vote_count")
+
         videos = requests.get(
             f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}"
         ).json()
@@ -109,8 +108,6 @@ def fetch_details(movie_title):
             "release_date": release_date,
             "rating": rating,
             "rt": rt_rating,
-            "popularity": popularity,
-            "votes": votes,
             "overview": overview
         }
 
@@ -194,17 +191,13 @@ def hybrid_recommend(movie):
         for i, score in enumerate(distances):
             collab_scores[collab_movies[i]] = score
 
-    # 🔥 NORMALIZATION
-    max_content = max(content_scores.values())
-    max_collab = max(collab_scores.values()) if collab_scores else 1
-
     final_scores = {}
 
     for title in content_scores:
-        norm_content = content_scores[title] / max_content if max_content else 0
-        norm_collab = collab_scores.get(title, 0) / max_collab if max_collab else 0
-
-        final_scores[title] = 0.6 * norm_content + 0.4 * norm_collab
+        final_scores[title] = (
+            0.6 * content_scores.get(title, 0) +
+            0.4 * collab_scores.get(title, 0)
+        )
 
     sorted_movies = sorted(final_scores.items(),
                            key=lambda x: x[1],
@@ -215,74 +208,30 @@ def hybrid_recommend(movie):
         results.append({
             "title": title,
             "poster": fetch_poster(title),
-            "score": round(score * 100, 1)   # 🔥 convert to %
+            "score": round(score, 2)
         })
 
     return results
-# ----------------Genre only----------#
-def recommend_by_genre(genre):
-    results = []
 
-    for _, row in new_df.iterrows():
-        if genre.lower() in row.tags:
-            results.append({
-                "title": row.title,
-                "poster": fetch_poster(row.title),
-                "score": round(row.vote_average, 1)
-            })
-
-    return results[:5]
 # ---------------- UI ----------------
 st.title("🎬 Movie Recommendation System")
 
-# Movie select with None option
-movie_list = ["None"] + list(new_df['title'])
-selected_movie = st.selectbox("Select a movie (optional)", movie_list)
+selected_movie = st.selectbox("Select a movie", new_df['title'])
 
-# Genre extraction (improved)
-all_genres = set()
-for tags in new_df['tags']:
-    for word in tags.split():
-        all_genres.add(word.capitalize())
-
-genre_options = ["All"] + sorted(list(all_genres))[:20]
-genre_filter = st.selectbox("🎭 Filter by Genre", genre_options)
-
-# ---------------- BUTTON ----------------
 if st.button("Recommend"):
+    st.session_state.recommendations = hybrid_recommend(selected_movie)
 
-    if selected_movie != "None":
-        st.session_state.recommendations = hybrid_recommend(selected_movie)
-
-    elif genre_filter != "All":
-        st.session_state.recommendations = recommend_by_genre(genre_filter)
-
-    else:
-        st.warning("Please select a movie or a genre")
-
-# ---------------- DISPLAY ----------------
 if "recommendations" in st.session_state:
-
-    movies_to_show = st.session_state.recommendations
-
-    # Apply genre filter on hybrid results also
-    if genre_filter != "All":
-        filtered = []
-        for movie in movies_to_show:
-            row = new_df[new_df['title'] == movie["title"]]
-            if not row.empty and genre_filter.lower() in str(row.iloc[0].tags):
-                filtered.append(movie)
-        movies_to_show = filtered
 
     st.subheader("🎯 Recommended Movies")
 
     cols = st.columns(5)
 
-    for i, movie in enumerate(movies_to_show):
+    for i, movie in enumerate(st.session_state.recommendations):
         with cols[i]:
             st.image(movie["poster"])
             st.write(movie["title"])
-            st.write(f"🔥 Score: {movie['score']}%")
+            st.write(f"🔥 Score: {movie['score']}")
 
             if st.button("View Details", key=i):
                 st.session_state.selected_movie_details = movie
@@ -298,8 +247,6 @@ if st.session_state.selected_movie_details:
     if details:
         st.write(f"⭐ IMDb: {details['rating']}")
         st.write(f"🍅 Rotten Tomatoes: {details['rt']}")
-        st.write(f"📊 Popularity: {details['popularity']}")
-        st.write(f"👥 Votes: {details['votes']}")
 
     st.subheader("📝 Overview")
     if details and details.get("overview"):
