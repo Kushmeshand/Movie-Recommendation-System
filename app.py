@@ -245,7 +245,7 @@ if "recommendations" in st.session_state:
 
     cols = st.columns(5)
 
-   for i, movie in enumerate(movies_to_show):
+    for i, movie in enumerate(movies_to_show):
         with cols[i]:
             st.image(movie["poster"])
             st.write(movie["title"])
