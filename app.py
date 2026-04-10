@@ -118,15 +118,28 @@ def fetch_details(movie_title):
 # ---------------- REDDIT ----------------
 def fetch_reddit_reviews(movie):
     try:
-        query = clean_title(movie) + " movie"
-        url = f"https://www.reddit.com/search.json?q={query}&limit=5&sort=top"
-        headers = {"User-agent": "Mozilla/5.0"}
+        cleaned = clean_title(movie)
 
-        data = requests.get(url, headers=headers).json()
+        # 🔥 better query
+        query = f"{cleaned} movie review discussion"
+
+        url = f"https://www.reddit.com/search.json?q={query}&limit=10&sort=top&t=all"
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        }
+
+        response = requests.get(url, headers=headers, timeout=10)
+        data = response.json()
 
         reviews = []
+
         for post in data["data"]["children"]:
             p = post["data"]
+
+            # 🔥 filter weak posts
+            if p["score"] < 5:
+                continue
 
             reviews.append({
                 "title": p["title"],
@@ -136,8 +149,12 @@ def fetch_reddit_reviews(movie):
                 "url": "https://reddit.com" + p["permalink"]
             })
 
+            if len(reviews) == 5:
+                break
+
         return reviews
-    except:
+
+    except Exception as e:
         return []
 # ---------------- DATA ----------------
 @st.cache_data
@@ -322,14 +339,16 @@ if st.session_state.selected_movie_details:
                 st.write(actor["name"])
 
     # -------- REDDIT --------
+        # -------- REDDIT --------
     st.subheader("💬 Reddit Reviews")
+
     reviews = fetch_reddit_reviews(movie["title"])
 
     if reviews:
         for r in reviews:
-            st.markdown(f"**r/{r['subreddit']}**")
+            st.markdown(f"### r/{r['subreddit']}")
             st.markdown(f"[{r['title']}]({r['url']})")
             st.write(f"⬆️ {r['score']}   💬 {r['comments']}")
             st.markdown("---")
     else:
-        st.write("No Reddit reviews found")
+        st.write("⚠️ No Reddit discussions found for this movie")
