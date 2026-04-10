@@ -118,7 +118,7 @@ def fetch_details(movie_title):
 # ---------------- REDDIT ----------------
 def fetch_reddit_reviews(movie):
     try:
-        query = clean_title(movie) + " movie review"
+        query = clean_title(movie) + " movie"
         url = f"https://www.reddit.com/search.json?q={query}&limit=5&sort=top"
         headers = {"User-agent": "Mozilla/5.0"}
 
@@ -126,15 +126,19 @@ def fetch_reddit_reviews(movie):
 
         reviews = []
         for post in data["data"]["children"]:
+            p = post["data"]
+
             reviews.append({
-                "title": post["data"]["title"],
-                "url": "https://reddit.com" + post["data"]["permalink"]
+                "title": p["title"],
+                "subreddit": p["subreddit"],
+                "score": p["score"],
+                "comments": p["num_comments"],
+                "url": "https://reddit.com" + p["permalink"]
             })
 
         return reviews
     except:
         return []
-
 # ---------------- DATA ----------------
 @st.cache_data
 def load_data():
@@ -294,22 +298,37 @@ if st.session_state.selected_movie_details:
         st.subheader("🎬 Trailer")
         st.video(f"https://www.youtube.com/watch?v={details['trailer']}")
 
-    if details and details["director"]:
+    
         st.subheader("🎥 Director")
-        st.write(details["director"]["name"])
 
-    if details and details["cast"]:
+    if details and details["director"]:
+         director = details["director"]
+
+    if director.get("profile_path"):
+        st.image("https://image.tmdb.org/t/p/w200" + director["profile_path"])
+
+        st.write(director["name"])
+
         st.subheader("👥 Cast")
-        for actor in details["cast"]:
+
+   if details and details["cast"]:
+      cols = st.columns(5)
+
+     for i, actor in enumerate(details["cast"]):
+        with cols[i]:
+            if actor.get("profile_path"):
+                st.image("https://image.tmdb.org/t/p/w200" + actor["profile_path"])
             st.write(actor["name"])
-
     # -------- REDDIT --------
-    st.subheader("💬 Reddit Reviews")
+   st.subheader("💬 Reddit Reviews")
 
-    reviews = fetch_reddit_reviews(movie["title"])
+   reviews = fetch_reddit_reviews(movie["title"])
 
-    if reviews:
-        for r in reviews:
-            st.markdown(f"[{r['title']}]({r['url']})")
-    else:
-        st.write("No Reddit reviews found")
+  if reviews:
+    for r in reviews:
+        st.markdown(f"**r/{r['subreddit']}**")
+        st.markdown(f"[{r['title']}]({r['url']})")
+        st.write(f"⬆️ {r['score']}   💬 {r['comments']}")
+        st.markdown("---")
+  else:
+    st.write("No Reddit reviews found")
