@@ -219,19 +219,45 @@ def hybrid_recommend(movie):
         })
 
     return results
+# ----------------Genre only----------#
+def recommend_by_genre(genre):
+    results = []
 
+    for _, row in new_df.iterrows():
+        if genre.lower() in row.tags:
+            results.append({
+                "title": row.title,
+                "poster": fetch_poster(row.title),
+                "score": round(row.vote_average, 1)
+            })
+
+    return results[:5]
 # ---------------- UI ----------------
 st.title("🎬 Movie Recommendation System")
 
-selected_movie = st.selectbox("Select a movie", new_df['title'])
-genre_filter = st.selectbox(
-    "🎭 Filter by Genre",
-    ["All", "Action", "Comedy", "Drama", "Thriller"]
-)
-if st.button("Recommend"):
-    st.session_state.recommendations = hybrid_recommend(selected_movie)
-movies_to_show = st.session_state.recommendations
+movie_list = ["None"] + list(new_df['title'])
 
+selected_movie = st.selectbox("Select a movie (optional)", movie_list)
+# extract unique genres from dataset
+all_genres = set()
+
+for tags in new_df['tags']:
+    for word in tags.split():
+        all_genres.add(word.capitalize())
+
+genre_options = ["All"] + sorted(list(all_genres))[:20]   # limit for UI
+
+genre_filter = st.selectbox("🎭 Filter by Genre", genre_options)
+if st.button("Recommend"):
+
+    if selected_movie != "None":
+        st.session_state.recommendations = hybrid_recommend(selected_movie)
+
+    elif genre_filter != "All":
+        st.session_state.recommendations = recommend_by_genre(genre_filter)
+
+    else:
+        st.warning("Please select a movie or a genre")
 if genre_filter != "All":
     filtered = []
     for movie in movies_to_show:
