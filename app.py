@@ -110,7 +110,7 @@ def fetch_details(movie_title):
             "rating": rating,
             "rt": rt_rating,
             "popularity": popularity,
-            "votes": votes
+            "votes": votes,
             "overview": overview
         }
 
