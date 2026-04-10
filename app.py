@@ -257,7 +257,7 @@ st.markdown("""
 CineMatch AI
 </h1>
 <p style='text-align:center; font-size:22px;'>
-Unlimited Movie Recommendations Powered by AI
+Unlimited Movie Recommendations 
 </p>
 """, unsafe_allow_html=True)
 
@@ -292,8 +292,6 @@ if st.session_state.selected_movie_details:
     if details:
         st.write(f"⭐ IMDb: {details['rating']}")
         st.write(f"🍅 Rotten Tomatoes: {details['rt']}")
-        st.write(f"📊 Popularity: {details['popularity']}")
-        st.write(f"👥 Votes: {details['votes']}")
         st.write(f"📅 Release Date: {details['release_date']}")
         st.write(f"⏱ Runtime: {details['runtime']} min")
     st.subheader("📝 Overview")
