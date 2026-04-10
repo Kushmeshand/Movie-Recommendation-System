@@ -12,7 +12,7 @@ st.markdown("""
 <style>
 .stApp {
     background-image: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.9)),
-    url("https://unsplash.com/photos/multimedia-streaming-concept-hand-holding-remote-control-tv-screen-with-lot-of-pictures-television-streaming-vod-content-provider-video-service-with-internet-streaming-multimedia-shows-series-CGD8zR5Gom8");
+    url("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba");
     
     background-size: cover;
     background-position: center;
