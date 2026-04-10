@@ -235,19 +235,20 @@ def recommend_by_genre(genre):
 # ---------------- UI ----------------
 st.title("🎬 Movie Recommendation System")
 
+# Movie select with None option
 movie_list = ["None"] + list(new_df['title'])
-
 selected_movie = st.selectbox("Select a movie (optional)", movie_list)
-# extract unique genres from dataset
-all_genres = set()
 
+# Genre extraction (improved)
+all_genres = set()
 for tags in new_df['tags']:
     for word in tags.split():
         all_genres.add(word.capitalize())
 
-genre_options = ["All"] + sorted(list(all_genres))[:20]   # limit for UI
-
+genre_options = ["All"] + sorted(list(all_genres))[:20]
 genre_filter = st.selectbox("🎭 Filter by Genre", genre_options)
+
+# ---------------- BUTTON ----------------
 if st.button("Recommend"):
 
     if selected_movie != "None":
@@ -258,14 +259,20 @@ if st.button("Recommend"):
 
     else:
         st.warning("Please select a movie or a genre")
-if genre_filter != "All":
-    filtered = []
-    for movie in movies_to_show:
-        row = new_df[new_df['title'] == movie["title"]]
-        if not row.empty and genre_filter.lower() in str(row.iloc[0].tags):
-            filtered.append(movie)
-    movies_to_show = filtered
+
+# ---------------- DISPLAY ----------------
 if "recommendations" in st.session_state:
+
+    movies_to_show = st.session_state.recommendations
+
+    # Apply genre filter on hybrid results also
+    if genre_filter != "All":
+        filtered = []
+        for movie in movies_to_show:
+            row = new_df[new_df['title'] == movie["title"]]
+            if not row.empty and genre_filter.lower() in str(row.iloc[0].tags):
+                filtered.append(movie)
+        movies_to_show = filtered
 
     st.subheader("🎯 Recommended Movies")
 
@@ -293,6 +300,7 @@ if st.session_state.selected_movie_details:
         st.write(f"🍅 Rotten Tomatoes: {details['rt']}")
         st.write(f"📊 Popularity: {details['popularity']}")
         st.write(f"👥 Votes: {details['votes']}")
+
     st.subheader("📝 Overview")
     if details and details.get("overview"):
         st.write(details["overview"])
