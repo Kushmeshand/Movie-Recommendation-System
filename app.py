@@ -20,7 +20,6 @@ collab_movies = load_pkl_from_drive(
     "https://drive.google.com/uc?export=download&id=15XF2K6hnPOHJG8e3RI-jnyXdxci43yrU"
 )
 
-# API KEYS
 API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
 OMDB_KEY = "e15bce82"
 
@@ -115,47 +114,6 @@ def fetch_details(movie_title):
     except:
         return None
 
-# ---------------- REDDIT ----------------
-def fetch_reddit_reviews(movie):
-    try:
-        cleaned = clean_title(movie)
-
-        # 🔥 better query
-        query = f"{cleaned} movie review discussion"
-
-        url = f"https://www.reddit.com/search.json?q={query}&limit=10&sort=top&t=all"
-
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-        }
-
-        response = requests.get(url, headers=headers, timeout=10)
-        data = response.json()
-
-        reviews = []
-
-        for post in data["data"]["children"]:
-            p = post["data"]
-
-            # 🔥 filter weak posts
-            if p["score"] < 5:
-                continue
-
-            reviews.append({
-                "title": p["title"],
-                "subreddit": p["subreddit"],
-                "score": p["score"],
-                "comments": p["num_comments"],
-                "url": "https://reddit.com" + p["permalink"]
-            })
-
-            if len(reviews) == 5:
-                break
-
-        return reviews
-
-    except Exception as e:
-        return []
 # ---------------- DATA ----------------
 @st.cache_data
 def load_data():
@@ -208,45 +166,52 @@ def create_model(df):
 new_df = preprocess()
 similarity = create_model(new_df)
 
-# ---------------- CONTENT ----------------
-def recommend(movie):
+# ---------------- HYBRID ----------------
+def hybrid_recommend(movie):
     index = new_df[new_df['title'] == movie].index[0]
     distances = similarity[index]
 
-    movies_list = sorted(list(enumerate(distances)),
-                         reverse=True,
-                         key=lambda x: x[1])[1:6]
+    content_scores = {}
+    for i, score in enumerate(distances):
+        title = new_df.iloc[i].title
+        content_scores[title] = score
 
-    results = []
-    for i in movies_list:
-        row = new_df.iloc[i[0]]
-        results.append({
-            "title": row.title,
-            "poster": fetch_poster(row.title),
-            "rating": round(row.vote_average, 1),
-            "overview": " ".join(row.overview)
-        })
-    return results
+    collab_scores = {}
 
-# ---------------- COLLAB ----------------
-def recommend_collab(movie):
     match = None
     for m in collab_movies:
         if movie.lower() in m.lower():
             match = m
             break
 
-    if match is None:
-        return []
+    if match:
+        idx = collab_movies.index(match)
+        distances = collab_similarity[idx]
 
-    idx = collab_movies.index(match)
-    distances = collab_similarity[idx]
+        for i, score in enumerate(distances):
+            collab_scores[collab_movies[i]] = score
 
-    movies_list = sorted(list(enumerate(distances)),
-                         key=lambda x: x[1],
-                         reverse=True)[1:6]
+    final_scores = {}
 
-    return [collab_movies[i[0]] for i in movies_list]
+    for title in content_scores:
+        final_scores[title] = (
+            0.6 * content_scores.get(title, 0) +
+            0.4 * collab_scores.get(title, 0)
+        )
+
+    sorted_movies = sorted(final_scores.items(),
+                           key=lambda x: x[1],
+                           reverse=True)[1:6]
+
+    results = []
+    for title, score in sorted_movies:
+        results.append({
+            "title": title,
+            "poster": fetch_poster(title),
+            "score": round(score, 2)
+        })
+
+    return results
 
 # ---------------- UI ----------------
 st.title("🎬 Movie Recommendation System")
@@ -254,44 +219,22 @@ st.title("🎬 Movie Recommendation System")
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
 if st.button("Recommend"):
-    st.session_state.cb = recommend(selected_movie)
-    st.session_state.cf = recommend_collab(selected_movie)
+    st.session_state.recommendations = hybrid_recommend(selected_movie)
 
-if "cb" in st.session_state:
+if "recommendations" in st.session_state:
 
-    st.subheader("🎯 Content-Based Recommendations")
+    st.subheader("🎯 Recommended Movies")
+
     cols = st.columns(5)
 
-    for i, movie in enumerate(st.session_state.cb):
+    for i, movie in enumerate(st.session_state.recommendations):
         with cols[i]:
             st.image(movie["poster"])
             st.write(movie["title"])
-            st.write(f"⭐ {movie['rating']}")
+            st.write(f"🔥 Score: {movie['score']}")
 
-            if st.button("View Details", key=f"cb{i}"):
+            if st.button("View Details", key=i):
                 st.session_state.selected_movie_details = movie
-
-    st.subheader("🤝 Collaborative Recommendations")
-
-    if st.session_state.cf:
-        cols = st.columns(len(st.session_state.cf))
-
-        for i, title in enumerate(st.session_state.cf):
-            with cols[i]:
-                st.image(fetch_poster(title))
-                st.write(title)
-
-                details = fetch_details(title)
-                if details and details.get("rating"):
-                    st.write(f"⭐ {round(details['rating'],1)}")
-                else:
-                    st.write("⭐ N/A")
-
-                if st.button("View Details", key=f"cf{i}"):
-                    st.session_state.selected_movie_details = {
-                        "title": title,
-                        "overview": ""
-                    }
 
 # ---------------- DETAILS ----------------
 if st.session_state.selected_movie_details:
@@ -305,50 +248,26 @@ if st.session_state.selected_movie_details:
         st.write(f"⭐ IMDb: {details['rating']}")
         st.write(f"🍅 Rotten Tomatoes: {details['rt']}")
 
-    # -------- OVERVIEW --------
     st.subheader("📝 Overview")
     if details and details.get("overview"):
         st.write(details["overview"])
-    else:
-        st.write("Overview not available")
 
-    # -------- TRAILER --------
     if details and details.get("trailer"):
         st.subheader("🎬 Trailer")
         st.video(f"https://www.youtube.com/watch?v={details['trailer']}")
 
-    # -------- DIRECTOR --------
     st.subheader("🎥 Director")
     if details and details.get("director"):
         director = details["director"]
-
         if director.get("profile_path"):
             st.image("https://image.tmdb.org/t/p/w200" + director["profile_path"])
-
         st.write(director["name"])
 
-    # -------- CAST --------
     st.subheader("👥 Cast")
     if details and details.get("cast"):
         cols = st.columns(5)
-
         for i, actor in enumerate(details["cast"]):
             with cols[i]:
                 if actor.get("profile_path"):
                     st.image("https://image.tmdb.org/t/p/w200" + actor["profile_path"])
                 st.write(actor["name"])
-
-    # -------- REDDIT --------
-        # -------- REDDIT --------
-    st.subheader("💬 Reddit Reviews")
-
-    reviews = fetch_reddit_reviews(movie["title"])
-
-    if reviews:
-        for r in reviews:
-            st.markdown(f"### r/{r['subreddit']}")
-            st.markdown(f"[{r['title']}]({r['url']})")
-            st.write(f"⬆️ {r['score']}   💬 {r['comments']}")
-            st.markdown("---")
-    else:
-        st.write("⚠️ No Reddit discussions found for this movie")
