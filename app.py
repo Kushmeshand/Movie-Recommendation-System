@@ -314,7 +314,7 @@ if st.session_state.selected_movie_details:
     if details and details["cast"]:
       cols = st.columns(5)
 
-     for i, actor in enumerate(details["cast"]):
+      for i, actor in enumerate(details["cast"]):
         with cols[i]:
             if actor.get("profile_path"):
                 st.image("https://image.tmdb.org/t/p/w200" + actor["profile_path"])
