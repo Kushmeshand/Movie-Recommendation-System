@@ -311,7 +311,7 @@ if st.session_state.selected_movie_details:
 
         st.subheader("👥 Cast")
 
-   if details and details["cast"]:
+    if details and details["cast"]:
       cols = st.columns(5)
 
      for i, actor in enumerate(details["cast"]):
