@@ -191,13 +191,17 @@ def hybrid_recommend(movie):
         for i, score in enumerate(distances):
             collab_scores[collab_movies[i]] = score
 
+    # 🔥 NORMALIZATION
+    max_content = max(content_scores.values())
+    max_collab = max(collab_scores.values()) if collab_scores else 1
+
     final_scores = {}
 
     for title in content_scores:
-        final_scores[title] = (
-            0.6 * content_scores.get(title, 0) +
-            0.4 * collab_scores.get(title, 0)
-        )
+        norm_content = content_scores[title] / max_content if max_content else 0
+        norm_collab = collab_scores.get(title, 0) / max_collab if max_collab else 0
+
+        final_scores[title] = 0.6 * norm_content + 0.4 * norm_collab
 
     sorted_movies = sorted(final_scores.items(),
                            key=lambda x: x[1],
@@ -208,7 +212,7 @@ def hybrid_recommend(movie):
         results.append({
             "title": title,
             "poster": fetch_poster(title),
-            "score": round(score, 2)
+            "score": round(score * 100, 1)   # 🔥 convert to %
         })
 
     return results
@@ -231,7 +235,7 @@ if "recommendations" in st.session_state:
         with cols[i]:
             st.image(movie["poster"])
             st.write(movie["title"])
-            st.write(f"🔥 Score: {movie['score']}")
+            st.write(f"🔥 Score: {movie['score']}%")
 
             if st.button("View Details", key=i):
                 st.session_state.selected_movie_details = movie
