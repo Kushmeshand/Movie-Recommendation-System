@@ -256,6 +256,8 @@ if st.session_state.selected_movie_details:
         st.write(f"🍅 Rotten Tomatoes: {details['rt']}")
         st.write(f"📊 Popularity: {details['popularity']}")
         st.write(f"👥 Votes: {details['votes']}")
+        st.write(f"📅 Release Date: {details['release_date']}")
+        st.write(f"⏱ Runtime: {details['runtime']} min")
     st.subheader("📝 Overview")
     if details and details.get("overview"):
         st.write(details["overview"])
