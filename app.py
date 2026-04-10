@@ -12,7 +12,7 @@ st.markdown("""
 <style>
 .stApp {
     background-image: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.9)),
-    url("https://images.unsplash.com/photo-1608889175123-8ee362201f81");
+    url("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba");
     
     background-size: cover;
     background-position: center;
