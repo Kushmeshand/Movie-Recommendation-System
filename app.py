@@ -80,7 +80,23 @@ def fetch_poster(movie_title):
     except:
         pass
     return "https://via.placeholder.com/300x450.png?text=No+Image"
+def fetch_trending():
+    try:
+        url = f"https://api.themoviedb.org/3/trending/movie/day?api_key={API_KEY}"
+        data = requests.get(url).json()
 
+        movies = []
+        for m in data["results"][:5]:
+            poster = "https://image.tmdb.org/t/p/w500" + m["poster_path"] if m.get("poster_path") else ""
+            movies.append({
+                "title": m["title"],
+                "poster": poster,
+                "rating": round(m["vote_average"], 1)
+            })
+
+        return movies
+    except:
+        return []
 
 def fetch_details(movie_title):
     try:
@@ -260,7 +276,23 @@ CineMatch AI
 Unlimited Movie Recommendations 
 </p>
 """, unsafe_allow_html=True)
+st.subheader("🔥 Trending Now")
 
+trending = fetch_trending()
+cols = st.columns(5)
+
+for i, movie in enumerate(trending):
+    with cols[i]:
+        st.image(movie["poster"])
+        st.write(movie["title"])
+        st.write(f"⭐ {movie['rating']}")
+st.subheader("❤️ My Watchlist")
+
+if st.session_state.watchlist:
+    for item in st.session_state.watchlist:
+        st.write("🎬", item)
+else:
+    st.write("No movies added yet")
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
 if st.button("Recommend"):
@@ -280,12 +312,16 @@ if "recommendations" in st.session_state:
 
             if st.button("View Details", key=i):
                 st.session_state.selected_movie_details = movie
-
+            if st.button("❤️ Add Watchlist", key=f"watch{i}"):
+               if movie["title"] not in st.session_state.watchlist:
+                  st.session_state.watchlist.append(movie["title"])
 # ---------------- DETAILS ----------------
 if st.session_state.selected_movie_details:
     movie = st.session_state.selected_movie_details
     details = fetch_details(movie["title"])
-
+if "watchlist" not in st.session_state:
+    st.session_state.watchlist = []
+    
     st.markdown("---")
     st.header(movie["title"])
 
