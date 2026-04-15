@@ -276,13 +276,7 @@ def hybrid_recommend(movie):
 
 # ---------------- UI ----------------
 st.markdown("""
-<h1 style='text-align:center; font-size:60px; color:#e50914;'>
-CineMatch AI
-</h1>
-<p style='text-align:center; font-size:22px;'>
-Unlimited Movie Recommendations 
-</p>
-""", unsafe_allow_html=True)
+<style>
 div.stButton > button {
     width: 100%;
     height: 38px;
@@ -290,6 +284,17 @@ div.stButton > button {
     font-size: 14px;
     white-space: nowrap;
 }
+</style>
+""", unsafe_allow_html=True)
+st.markdown("""
+<h1 style='text-align:center; font-size:60px; color:#e50914;'>
+CineMatch AI
+</h1>
+<p style='text-align:center; font-size:22px;'>
+Unlimited Movie Recommendations 
+</p>
+""", unsafe_allow_html=True)
+
 if st.session_state.user:
     st.write(f"👋 Welcome, {st.session_state.user}")           
 st.subheader("🔥 Trending Now")
