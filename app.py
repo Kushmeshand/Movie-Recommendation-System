@@ -313,7 +313,7 @@ if st.session_state.user is None:
             st.session_state.user = username.strip()
             if username not in st.session_state.watchlists:
                 st.session_state.watchlists[username] = []
-            st.experimental_rerun()
+            st.rerun()
 
     st.stop()
 else:
@@ -353,7 +353,7 @@ if st.session_state.user:
             with c2:
                 if st.button("❌", key=f"rm{i}"):
                     user_watchlist.remove(item)
-                    st.experimental_rerun()
+                    st.rerun()
     else:
         st.write("No movies added yet")
 else:
