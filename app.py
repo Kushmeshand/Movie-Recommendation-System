@@ -433,11 +433,11 @@ if "recommendations" in st.session_state:
 
                   if not exists:
                      cursor.execute(
-                    "INSERT INTO watchlist (username, movie_title) VALUES (?, ?)",
-                    (st.session_state.user, movie["title"])
-                  )
-                    conn.commit()
-                    st.success("Added to Watchlist")
+                        "INSERT INTO watchlist (username, movie_title) VALUES (?, ?)",
+                        (st.session_state.user, movie["title"])
+                     )
+                     conn.commit()
+                     st.success("Added to Watchlist")
 # ---------------- DETAILS ----------------
 if st.session_state.selected_movie_details:
 
