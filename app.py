@@ -58,6 +58,8 @@ def load_pkl_from_drive(file_id):
 
 collab_similarity = load_pkl_from_drive("1hLX4egbrSd4hG2Qf1jhB5x5SumqtqO5V")
 collab_movies = load_pkl_from_drive("15XF2K6hnPOHJG8e3RI-jnyXdxci43yrU")
+API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
+OMDB_KEY = "e15bce82"
 
 # ---------------- CLEAN TITLE ----------------
 def clean_title(title):
@@ -309,12 +311,11 @@ if st.session_state.user is None:
     if st.button("Login"):
         if username.strip():
             st.session_state.user = username.strip()
-
             if username not in st.session_state.watchlists:
                 st.session_state.watchlists[username] = []
+            st.experimental_rerun()
 
-            st.rerun()
-
+    st.stop()
 else:
     st.write(f"👋 Welcome, {st.session_state.user}")
 
@@ -345,13 +346,18 @@ st.subheader("❤️ My Watchlist")
 
 if st.session_state.user:
     if user_watchlist:
-        for item in user_watchlist:
-            st.write("🎬", item)
+        for i, item in enumerate(user_watchlist):
+            c1, c2 = st.columns([4,1])
+            with c1:
+                st.write("🎬", item)
+            with c2:
+                if st.button("❌", key=f"rm{i}"):
+                    user_watchlist.remove(item)
+                    st.experimental_rerun()
     else:
         st.write("No movies added yet")
 else:
     st.write("Login to use watchlist")
-
 # ---------- SELECT MOVIE ----------
 movie_list = ["None"] + list(new_df['title'])
 selected_movie = st.selectbox("Select a movie", movie_list)
