@@ -66,7 +66,8 @@ def clean_title(title):
 # ---------------- SESSION ----------------
 if "selected_movie_details" not in st.session_state:
     st.session_state.selected_movie_details = None
-
+if "watchlist" not in st.session_state:
+    st.session_state.watchlist = []
 # ---------------- API ----------------
 def fetch_poster(movie_title):
     try:
@@ -288,7 +289,7 @@ for i, movie in enumerate(trending):
         st.write(f"⭐ {movie['rating']}")
 st.subheader("❤️ My Watchlist")
 
-if st.session_state.watchlist:
+if "watchlist" in st.session_state and st.session_state.watchlist:
     for item in st.session_state.watchlist:
         st.write("🎬", item)
 else:
