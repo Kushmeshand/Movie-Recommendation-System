@@ -360,7 +360,6 @@ if st.session_state.user is None:
 
     st.stop()
 else:
- else:
     col1, col2 = st.columns([5,1])
 
     with col1:
