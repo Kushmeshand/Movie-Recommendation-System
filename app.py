@@ -6,7 +6,27 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import io
+import sqlite3
 
+conn = sqlite3.connect("movies.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY,
+    password TEXT
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS watchlist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT,
+    movie_title TEXT
+)
+""")
+
+conn.commit()
 #-----------------theme-------------------------------#
 st.markdown("""
 <style>
@@ -305,27 +325,46 @@ Unlimited Movie Recommendations
 
 # ---------- LOGIN ----------
 if st.session_state.user is None:
-    st.subheader("🔐 Login")
-    username = st.text_input("Enter Username")
+    st.subheader("🔐 Login / Signup")
 
-    if st.button("Login"):
-        if username.strip():
-            st.session_state.user = username.strip()
-            if username not in st.session_state.watchlists:
-                st.session_state.watchlists[username] = []
-            st.rerun()
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Login"):
+            cursor.execute(
+                "SELECT * FROM users WHERE username=? AND password=?",
+                (username, password)
+            )
+            user = cursor.fetchone()
+
+            if user:
+                st.session_state.user = username
+                st.rerun()
+            else:
+                st.error("Invalid login")
+
+    with col2:
+        if st.button("Signup"):
+            try:
+                cursor.execute(
+                    "INSERT INTO users VALUES (?, ?)",
+                    (username, password)
+                )
+                conn.commit()
+                st.success("Signup successful! Please login.")
+            except:
+                st.error("Username already exists")
 
     st.stop()
 else:
     st.write(f"👋 Welcome, {st.session_state.user}")
-
-# current user watchlist
-if st.session_state.user:
-    current_user = st.session_state.user
-    user_watchlist = st.session_state.watchlists[current_user]
-else:
-    user_watchlist = []
-
+#----------LOGOUT--------------
+if st.button("Logout"):
+    st.session_state.user = None
+    st.rerun()
 # ---------- TRENDING ----------
 st.subheader("🔥 Trending Now")
 
@@ -344,20 +383,18 @@ for i, movie in enumerate(trending):
 # ---------- WATCHLIST ----------
 st.subheader("❤️ My Watchlist")
 
-if st.session_state.user:
-    if user_watchlist:
-        for i, item in enumerate(user_watchlist):
-            c1, c2 = st.columns([4,1])
-            with c1:
-                st.write("🎬", item)
-            with c2:
-                if st.button("❌", key=f"rm{i}"):
-                    user_watchlist.remove(item)
-                    st.rerun()
-    else:
-        st.write("No movies added yet")
+cursor.execute(
+    "SELECT movie_title FROM watchlist WHERE username=?",
+    (st.session_state.user,)
+)
+
+items = cursor.fetchall()
+
+if items:
+    for item in items:
+        st.write("🎬", item[0])
 else:
-    st.write("Login to use watchlist")
+    st.write("No movies added yet")
 # ---------- SELECT MOVIE ----------
 movie_list = ["None"] + list(new_df['title'])
 selected_movie = st.selectbox("Select a movie", movie_list)
@@ -385,11 +422,22 @@ if "recommendations" in st.session_state:
                 st.session_state.selected_movie_details = movie
 
             if st.session_state.user:
-                if st.button("❤️ Add", key=f"watch{i}"):
-                    if movie["title"] not in user_watchlist:
-                        user_watchlist.append(movie["title"])
-                        st.rerun()
+               if st.button("❤️ Add", key=f"watch{i}"):
 
+                  cursor.execute(
+                    "SELECT * FROM watchlist WHERE username=? AND movie_title=?",
+                     (st.session_state.user, movie["title"])
+                  )
+  
+                  exists = cursor.fetchone()
+
+                  if not exists:
+                     cursor.execute(
+                    "INSERT INTO watchlist (username, movie_title) VALUES (?, ?)",
+                    (st.session_state.user, movie["title"])
+                  )
+                    conn.commit()
+                    st.success("Added to Watchlist")
 # ---------------- DETAILS ----------------
 if st.session_state.selected_movie_details:
 
