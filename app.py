@@ -68,6 +68,12 @@ if "selected_movie_details" not in st.session_state:
     st.session_state.selected_movie_details = None
 if "watchlist" not in st.session_state:
     st.session_state.watchlist = []
+
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+if "watchlists" not in st.session_state:
+    st.session_state.watchlists = {}
 # ---------------- API ----------------
 def fetch_poster(movie_title):
     try:
@@ -277,6 +283,15 @@ CineMatch AI
 Unlimited Movie Recommendations 
 </p>
 """, unsafe_allow_html=True)
+div.stButton > button {
+    width: 100%;
+    height: 38px;
+    border-radius: 6px;
+    font-size: 14px;
+    white-space: nowrap;
+}
+if st.session_state.user:
+    st.write(f"👋 Welcome, {st.session_state.user}")           
 st.subheader("🔥 Trending Now")
 
 trending = fetch_trending()
@@ -287,18 +302,24 @@ for i, movie in enumerate(trending):
         st.image(movie["poster"])
         st.write(movie["title"])
         st.write(f"⭐ {movie['rating']}")
+
+        if st.button("View Details", key=f"trend{i}"):
+            st.session_state.selected_movie_details = movie
 st.subheader("❤️ My Watchlist")
 
-if "watchlist" in st.session_state and st.session_state.watchlist:
-    for item in st.session_state.watchlist:
-        st.write("🎬", item)
-else:
-    st.write("No movies added yet")
+if st.session_state.user:
+    if user_watchlist:
+        for item in user_watchlist:
+            st.write("🎬", item)
+    else:
+        st.write("No movies added yet")
 selected_movie = st.selectbox("Select a movie", new_df['title'])
 
 if st.button("Recommend"):
     st.session_state.recommendations = hybrid_recommend(selected_movie)
-
+if st.session_state.user:
+    current_user = st.session_state.user
+    user_watchlist = st.session_state.watchlists[current_user]
 if "recommendations" in st.session_state:
 
     st.subheader("🎯 Recommended Movies")
@@ -313,6 +334,9 @@ if "recommendations" in st.session_state:
 
             if st.button("View Details", key=i):
                 st.session_state.selected_movie_details = movie
+            if st.button("❤️ Add", key=f"watch{i}"):
+               if movie["title"] not in user_watchlist:
+                  user_watchlist.append(movie["title"])
             if st.button("❤️ Add Watchlist", key=f"watch{i}"):
                if movie["title"] not in st.session_state.watchlist:
                   st.session_state.watchlist.append(movie["title"])
