@@ -39,20 +39,25 @@ h1, h2, h3, h4, h5, h6, p, div {
 </style>
 """, unsafe_allow_html=True)
 # ---------------- LOAD PKL FROM DRIVE ----------------
-def load_pkl_from_drive(url):
-    response = requests.get(url)
+def load_pkl_from_drive(file_id):
+    URL = "https://drive.google.com/uc?export=download"
+    session = requests.Session()
+
+    response = session.get(URL, params={"id": file_id}, stream=True)
+
+    for key, value in response.cookies.items():
+        if key.startswith("download_warning"):
+            response = session.get(
+                URL,
+                params={"id": file_id, "confirm": value},
+                stream=True
+            )
+            break
+
     return pickle.load(io.BytesIO(response.content))
 
-collab_similarity = load_pkl_from_drive(
-    "https://drive.google.com/uc?export=download&id=1hLX4egbrSd4hG2Qf1jhB5x5SumqtqO5V"
-)
-
-collab_movies = load_pkl_from_drive(
-    "https://drive.google.com/uc?export=download&id=15XF2K6hnPOHJG8e3RI-jnyXdxci43yrU"
-)
-
-API_KEY = "4e4b10932b7c2b31fd1e0a074c80f0c9"
-OMDB_KEY = "e15bce82"
+collab_similarity = load_pkl_from_drive("1hLX4egbrSd4hG2Qf1jhB5x5SumqtqO5V")
+collab_movies = load_pkl_from_drive("15XF2K6hnPOHJG8e3RI-jnyXdxci43yrU")
 
 # ---------------- CLEAN TITLE ----------------
 def clean_title(title):
@@ -286,17 +291,41 @@ div.stButton > button {
 }
 </style>
 """, unsafe_allow_html=True)
+
 st.markdown("""
 <h1 style='text-align:center; font-size:60px; color:#e50914;'>
 CineMatch AI
 </h1>
-<p style='text-align:center; font-size:22px;'>
-Unlimited Movie Recommendations 
+<p style='text-align:center; font-size:22px; color:white;'>
+Unlimited Movie Recommendations
 </p>
 """, unsafe_allow_html=True)
 
+# ---------- LOGIN ----------
+if st.session_state.user is None:
+    st.subheader("🔐 Login")
+    username = st.text_input("Enter Username")
+
+    if st.button("Login"):
+        if username.strip():
+            st.session_state.user = username.strip()
+
+            if username not in st.session_state.watchlists:
+                st.session_state.watchlists[username] = []
+
+            st.rerun()
+
+else:
+    st.write(f"👋 Welcome, {st.session_state.user}")
+
+# current user watchlist
 if st.session_state.user:
-    st.write(f"👋 Welcome, {st.session_state.user}")           
+    current_user = st.session_state.user
+    user_watchlist = st.session_state.watchlists[current_user]
+else:
+    user_watchlist = []
+
+# ---------- TRENDING ----------
 st.subheader("🔥 Trending Now")
 
 trending = fetch_trending()
@@ -310,6 +339,8 @@ for i, movie in enumerate(trending):
 
         if st.button("View Details", key=f"trend{i}"):
             st.session_state.selected_movie_details = movie
+
+# ---------- WATCHLIST ----------
 st.subheader("❤️ My Watchlist")
 
 if st.session_state.user:
@@ -318,17 +349,24 @@ if st.session_state.user:
             st.write("🎬", item)
     else:
         st.write("No movies added yet")
-selected_movie = st.selectbox("Select a movie", new_df['title'])
+else:
+    st.write("Login to use watchlist")
 
+# ---------- SELECT MOVIE ----------
+movie_list = ["None"] + list(new_df['title'])
+selected_movie = st.selectbox("Select a movie", movie_list)
+
+# ---------- RECOMMEND ----------
 if st.button("Recommend"):
-    st.session_state.recommendations = hybrid_recommend(selected_movie)
-if st.session_state.user:
-    current_user = st.session_state.user
-    user_watchlist = st.session_state.watchlists[current_user]
+    if selected_movie != "None":
+        st.session_state.recommendations = hybrid_recommend(selected_movie)
+    else:
+        st.warning("Please select a movie")
+
+# ---------- RECOMMENDATION DISPLAY ----------
 if "recommendations" in st.session_state:
 
     st.subheader("🎯 Recommended Movies")
-
     cols = st.columns(5)
 
     for i, movie in enumerate(st.session_state.recommendations):
@@ -337,21 +375,21 @@ if "recommendations" in st.session_state:
             st.write(movie["title"])
             st.write(f"🔥 Score: {movie['score']}%")
 
-            if st.button("View Details", key=i):
+            if st.button("View Details", key=f"rec{i}"):
                 st.session_state.selected_movie_details = movie
-            if st.button("❤️ Add", key=f"watch{i}"):
-               if movie["title"] not in user_watchlist:
-                  user_watchlist.append(movie["title"])
-            if st.button("❤️ Add Watchlist", key=f"watch{i}"):
-               if movie["title"] not in st.session_state.watchlist:
-                  st.session_state.watchlist.append(movie["title"])
+
+            if st.session_state.user:
+                if st.button("❤️ Add", key=f"watch{i}"):
+                    if movie["title"] not in user_watchlist:
+                        user_watchlist.append(movie["title"])
+                        st.rerun()
+
 # ---------------- DETAILS ----------------
 if st.session_state.selected_movie_details:
+
     movie = st.session_state.selected_movie_details
     details = fetch_details(movie["title"])
-if "watchlist" not in st.session_state:
-    st.session_state.watchlist = []
-    
+
     st.markdown("---")
     st.header(movie["title"])
 
@@ -360,6 +398,9 @@ if "watchlist" not in st.session_state:
         st.write(f"🍅 Rotten Tomatoes: {details['rt']}")
         st.write(f"📅 Release Date: {details['release_date']}")
         st.write(f"⏱ Runtime: {details['runtime']} min")
+        st.write(f"📊 Popularity: {details['popularity']}")
+        st.write(f"👥 Votes: {details['votes']}")
+
     st.subheader("📝 Overview")
     if details and details.get("overview"):
         st.write(details["overview"])
@@ -371,13 +412,16 @@ if "watchlist" not in st.session_state:
     st.subheader("🎥 Director")
     if details and details.get("director"):
         director = details["director"]
+
         if director.get("profile_path"):
             st.image("https://image.tmdb.org/t/p/w200" + director["profile_path"])
+
         st.write(director["name"])
 
     st.subheader("👥 Cast")
     if details and details.get("cast"):
         cols = st.columns(5)
+
         for i, actor in enumerate(details["cast"]):
             with cols[i]:
                 if actor.get("profile_path"):
