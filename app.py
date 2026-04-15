@@ -360,11 +360,29 @@ if st.session_state.user is None:
 
     st.stop()
 else:
-    st.write(f"👋 Welcome, {st.session_state.user}")
-#----------LOGOUT--------------
-if st.button("Logout"):
-    st.session_state.user = None
-    st.rerun()
+   st.markdown(f"""
+<div style="
+    background: rgba(255,255,255,0.08);
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+">
+    <div style="font-size:24px; font-weight:600; color:white;">
+        👋 Welcome, <span style="color:#e50914;">{st.session_state.user}</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+#-----------LOGOUT--------------
+col1, col2, col3 = st.columns([6,1,6])
+
+with col2:
+    if st.button("Logout"):
+        st.session_state.user = None
+        st.rerun()
 # ---------- TRENDING ----------
 st.subheader("🔥 Trending Now")
 
